@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 运行时数据缓存（由抓取脚本生成，不入库）
+cache/
+gui_venv/
+*.log
+
+# 本地工具脚本不入库
+__test_gui.bat
+
+# IDE
+.idea/
+.vscode/

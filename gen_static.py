@@ -335,6 +335,19 @@ def build_html(d):
         mae_txt = f"P1 {mae_p1:.2f} | P2 {mae_p2:.2f} | P3 {mae_p3:.2f}"
 
         spark_in_hero = spark_html
+        # 估算目标日：cur=最新已公布净值日；若今天净值已公布(cur==今天) → 目标=下一交易日
+        import datetime as _dt
+        cur_dt = _dt.date.fromisoformat(cur)
+        today = _dt.date.today()
+        if cur_dt >= today:
+            nxt = cur_dt + _dt.timedelta(days=1)
+            while nxt.weekday() >= 5:   # 跳过周末
+                nxt += _dt.timedelta(days=1)
+            target = nxt.isoformat()
+            lbl = f"下一交易日估算（{target}）"
+        else:
+            target = cur
+            lbl = f"今日盘中估算（{cur}）"
         ref_txt = f"较上一交易日 <b>{nav_prev}</b>（{cur}）"
 
         range_bar = build_range_bar(band[0], band[1], center)
@@ -344,7 +357,7 @@ def build_html(d):
         hero = f"""
 <div class="hero">
   <div class="top-row">
-    <span class="lbl">今日估算涨跌幅</span>
+    <span class="lbl">{lbl}</span>
     <span class="badge">模型 v3</span>
   </div>
   <div class="main {cl(center)}">{center:+.2f}%</div>

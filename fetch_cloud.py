@@ -71,17 +71,35 @@ def fetch_kline(code):
     sym = ts_symbol(code)
     url = (f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
            f"?param={sym},day,{BEG},{TODAY},400,qfq")
+    out = {}
     for attempt in range(5):
         txt = get(url, {"User-Agent": "Mozilla/5.0", "Referer": "https://gu.qq.com/"})
         try:
             d = json.loads(txt)
             node = d["data"][sym]
             kl = node.get("qfqday") or node.get("day")
-            return {row[0]: float(row[2]) for row in kl}
+            out = {row[0]: float(row[2]) for row in kl}
+            break
         except Exception:
             time.sleep(1.5 * (attempt + 1))
-    print(f"  kline fail {code}")
-    return {}
+    # 腾讯日K长窗口当天数据更新滞后 → 用实时行情接口补当天收盘价
+    if TODAY not in out:
+        try:
+            q = f"https://qt.gtimg.cn/q={sym}"
+            raw = urllib.request.urlopen(urllib.request.Request(q, headers={
+                "User-Agent": "Mozilla/5.0"}), timeout=15).read().decode("gbk", "ignore")
+            m = __import__("re").search(r'v_(\w+)=\"([^\"]+)\"', raw)
+            if m:
+                p = m.group(2).split("~")
+                cur = float(p[3])
+                if cur > 0:
+                    out[TODAY] = cur
+                    print(f"    [补] {sym} 当天收盘价 {cur} ({TODAY})")
+        except Exception:
+            pass
+    if not out:
+        print(f"  kline fail {code}")
+    return out
 
 def fetch_group(group, codes):
     out = {}

@@ -51,9 +51,10 @@ def load_last():
     return None
 
 
-def save_last(date, nav):
+def save_last(date, nav, chg):
     os.makedirs(CACHE, exist_ok=True)
-    json.dump({"date": date, "nav": nav}, open(LAST_FILE, "w", encoding="utf-8"))
+    json.dump({"date": date, "nav": nav, "chg": chg},
+              open(LAST_FILE, "w", encoding="utf-8"))
 
 
 def main():
@@ -71,7 +72,7 @@ def main():
     if last_date == date:
         print(f"updated=0 last_date={date}")
         return
-    save_last(date, nav)
+    save_last(date, nav, chg)
     print(f"updated=1 date={date} nav={nav} chg={chg}")
     print(f"last_date={last_date or 'none'}")
 

@@ -28,11 +28,33 @@ def load_result():
         return None
 
 
+def load_last_nav():
+    """读取最近一次官方实际净值（由 nav_watch.py 写入）"""
+    p = os.path.join(CACHE, "last_nav.json")
+    if not os.path.exists(p):
+        return None
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return None
+
+
 def build_desp(d):
     if not d:
         return "完整估值已更新（结果文件暂缺，请打开页面查看）"
     lines = []
-    lines.append(f"**今日估值：{d.get('P_final_corr', 0):+.2f}%**")
+    # ── 第一段：官方实际净值（当天公布） ──
+    last = load_last_nav()
+    if last:
+        chg = last.get("chg")
+        chg_txt = f"{chg:+.2f}%" if isinstance(chg, (int, float)) else "--"
+        lines.append("**📊 官方净值（实际）**")
+        lines.append(f"净值：**{last.get('nav', '--')}** ｜ 当日涨跌：**{chg_txt}**")
+        lines.append(f"日期：{last.get('date', '--')}")
+        lines.append("")
+    # ── 第二段：模型估算（下一交易日） ──
+    lines.append("**🤖 模型估算（下一交易日）**")
+    lines.append(f"估算涨跌：**{d.get('P_final_corr', 0):+.2f}%**")
     lines.append(f"预计净值：{d.get('nav_center', '--')}（较前值 {d.get('nav_prev', '--')}）")
     lines.append(f"合理区间：{d.get('band_pct', [0, 0])[0]:+.2f}% ~ {d.get('band_pct', [0, 0])[1]:+.2f}%")
     lines.append(f"置信度：{d.get('confidence', '-')} | PCB信号：{d.get('pcb_signal', '-')}")

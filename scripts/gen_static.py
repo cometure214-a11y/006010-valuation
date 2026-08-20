@@ -149,6 +149,29 @@ details[open] summary .arr{transform:rotate(90deg)}
 .loading{color:#8892a3;font-size:12px;text-align:center;padding:14px 0}
 #rt_box{display:none}
 .tip{font-size:10.5px;color:#6b7280;line-height:1.6;padding-top:6px}
+
+/* ─── v4：数据质量横幅 / 估算模式徽标 / 覆盖率条 ─── */
+.banner{display:flex;gap:8px;align-items:flex-start;border-radius:12px;padding:10px 12px;
+        margin-bottom:10px;font-size:11.5px;line-height:1.6}
+.banner.warn{background:rgba(220,202,106,.10);border:1px solid rgba(220,202,106,.22);color:#dcdcaa}
+.banner.err{background:rgba(240,78,60,.10);border:1px solid rgba(240,78,60,.26);color:#f0806f}
+.banner .ico{flex:none;font-weight:700}
+.banner b{color:#e6e9ef}
+.mode{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:.3px}
+.mode.settled{background:rgba(48,164,108,.14);color:#30a46c}
+.mode.intraday{background:rgba(240,78,60,.13);color:#f04e3c}
+.mode.next{background:rgba(139,148,163,.14);color:#a3adbd}
+.cov{margin-top:8px}
+.cov .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;display:flex}
+.cov .bar i{display:block;height:100%}
+.cov .bar i.a{background:linear-gradient(90deg,#4ec9b0,#30a46c)}
+.cov .bar i.b{background:rgba(139,148,163,.30)}
+.cov .lg{display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-top:4px}
+.drop{font-size:10.5px;color:#6b7280;line-height:1.7;padding-top:6px;
+      border-top:1px dashed rgba(255,255,255,.07);margin-top:6px}
+.drop code{color:#a3adbd;font-size:10px}
+.wbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);margin-top:5px}
+.wbar i{display:block;height:100%}
 """
 
 JS = """

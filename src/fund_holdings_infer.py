@@ -37,9 +37,17 @@ except Exception:
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)  # 项目根
 CACHE = os.path.join(ROOT, "cache")
+sys.path.insert(0, HERE)
+import core
+
 NAV = json.load(open(os.path.join(CACHE, "nav.json"), encoding="utf-8"))
-KL = json.load(open(os.path.join(CACHE, "klines.json"), encoding="utf-8"))
+# 只用正式收盘价拟合：盘中价混入会让 LASSO/NNLS 权重被当日噪声带偏（优化意见 §6）
+KL, KL_META = core.load_settled_klines(CACHE, verbose=False)
 DIST = json.load(open(os.path.join(CACHE, "distract.json"), encoding="utf-8"))
+if KL_META["unsettled"]:
+    DIST, _nd = core.strip_unsettled(DIST, KL_META["unsettled"])
+    print(f"[数据卫生] 剔除未结算日期 {KL_META['unsettled']}"
+          f"（klines {KL_META['stripped']} 条 + distract {_nd} 条）")
 
 # 候选股统一池：光通信(10) + PCB(3) + 半导体(4) + 市场(1) + 干扰股(7)
 OPTICAL = ["688498", "688048", "300502", "688313", "300620",

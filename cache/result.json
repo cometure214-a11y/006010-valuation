@@ -1,9 +1,16 @@
 {
-  "version": "v3",
+  "version": "v4",
   "cur_date": "2026-08-20",
   "target_date": "2026-08-20",
+  "estimation_mode": "settled",
+  "estimation_label": "今日官方净值（2026-08-20）",
+  "market_session": "pre_open",
+  "is_official_published": true,
+  "nav_latest_date": "2026-08-20",
   "nav_prev": 0.5384,
   "nav_prev_date": "2026-08-19",
+  "date_check_ok": true,
+  "date_problems": [],
   "models": {
     "P1_Q2静态": 4.39,
     "P2_调仓替代": 4.14,
@@ -12,24 +19,134 @@
     "P5_个股辅助": 3.63
   },
   "model_weights": {
-    "P1_Q2静态": 0.16,
-    "P2_调仓替代": 0.165,
-    "P3_行业因子": 0.225,
-    "P4_层级组合": 0.225,
-    "P5_个股辅助": 0.225
+    "P3_行业因子": 0.504,
+    "P4_层级组合": 0.496,
+    "P1_Q2静态": 0.0,
+    "P2_调仓替代": 0.0,
+    "P5_个股辅助": 0.0
   },
-  "P_final": 4.16,
-  "bias_correction": -0.2,
-  "P_final_corr": 3.97,
-  "nav_center": 0.5597,
+  "model_groups": {
+    "G1_静态基准": [
+      "P1_Q2静态"
+    ],
+    "G2_调仓替代": [
+      "P2_调仓替代"
+    ],
+    "G3_行业暴露": [
+      "P3_行业因子",
+      "P4_层级组合"
+    ],
+    "G4_个股反推": [
+      "P5_个股辅助"
+    ]
+  },
+  "group_weights": {
+    "G1_静态基准": 0.0,
+    "G2_调仓替代": 0.0,
+    "G3_行业暴露": 1.0,
+    "G4_个股反推": 0.0
+  },
+  "ensemble_audit": {
+    "gate": 1.15,
+    "mae_power": 2.0,
+    "mae_floor": 0.02,
+    "weight_cap": 0.7,
+    "provisional_cap": 0.15,
+    "dropped": [
+      "P1_Q2静态",
+      "P2_调仓替代",
+      "P5_个股辅助"
+    ],
+    "n_active": 2,
+    "provisional_capped": [],
+    "model_mae_used": {
+      "P1_Q2静态": 0.64,
+      "P2_调仓替代": 0.618,
+      "P3_行业因子": 0.442,
+      "P4_层级组合": 0.446,
+      "P5_个股辅助": 0.525
+    },
+    "group_mae": {
+      "G1_静态基准": 0.64,
+      "G2_调仓替代": 0.618,
+      "G3_行业暴露": 0.442,
+      "G4_个股反推": 0.525
+    },
+    "p5_mae_source": "真实样本外 80日回测（2026-04-27~2026-08-20，近40日）",
+    "p5_is_real_oos": true,
+    "bias_source": "集成自身历史误差（非借用 P3）"
+  },
+  "data_hygiene": {
+    "has_intraday_snapshot": false,
+    "intraday_date": null,
+    "intraday_settled": null,
+    "unsettled_dates": [],
+    "stripped_rows": 0,
+    "note": "klines.json 只含正式收盘价；盘中实时价存 intraday.json，不参与滚动回归/误差统计/回测"
+  },
+  "caliber_decision": {
+    "primary": "集成 闸门1.15 power2",
+    "winner_by_segment": {
+      "select": "P1 Q2静态(基线)",
+      "validate": "G3均值(P3+P4)/2",
+      "all": "集成 闸门1.15 power2",
+      "consistent": false
+    },
+    "rank_flip_detected": true,
+    "ensemble_vs_single_pp": 0.0086,
+    "recommendation": "两者全段统计无差异（|0.0086|pp < 0.02pp）→ 主口径仍取 集成 闸门1.15 power2，因其跨段波动 0.1635pp 小于单模型 0.2811pp",
+    "validation_period": [
+      "2026-07-02",
+      "2026-08-20"
+    ],
+    "source": "tests/backtest_v3.py --decide"
+  },
+  "P_final": 4.35,
+  "bias_correction": -0.37,
+  "bias_detail": {
+    "med20": -0.2745,
+    "med40": -0.2307,
+    "ewma": -0.4712,
+    "raw": -0.3728,
+    "applied": -0.3728,
+    "divergence": 0.2405,
+    "shrink": 1.0,
+    "stable": true,
+    "n": 40
+  },
+  "P_final_corr": 3.98,
+  "nav_center": 0.5598,
   "band_pct": [
-    3.1,
-    4.83
+    3.06,
+    4.9
   ],
   "model_spread_pct": 0.76,
-  "theta_pcb": 0.0845,
+  "theta_pcb": 0.0847,
   "theta_mkt": 0.0,
   "pcb_signal": "强信号",
+  "pcb_evidence": {
+    "C1_多窗口为正": true,
+    "C2_替代比例上升": true,
+    "C3_加PCB后MAE下降": true,
+    "C4_个股反推独立证据": true,
+    "C5_多篮子一致": true,
+    "theta_slope": 0.01026,
+    "mae_gain_pp": 0.0134,
+    "beta_pcb": 0.1053,
+    "theta_now": 0.0847,
+    "windows_pcb": [
+      0.1703,
+      0.1688,
+      0.1161
+    ]
+  },
+  "pcb_mae_with": 0.442,
+  "pcb_mae_without": 0.455,
+  "pcb_basket_loo": [
+    0.1135,
+    0.0873,
+    0.0967
+  ],
   "pcb_sensitivity": {
     "60": 0.1161,
     "20": 0.1688,
@@ -43,12 +160,35 @@
   },
   "residual": 0.031,
   "confidence": "高",
+  "confidence_score": 86,
+  "confidence_detail": {
+    "mae": 35.3,
+    "spread": 23.2,
+    "theta": 10.2,
+    "bias": 8.6,
+    "data": 9.1
+  },
   "mae": {
     "P1": 0.64,
     "P2": 0.62,
-    "P3": 0.44
+    "P3": 0.44,
+    "P4": 0.45,
+    "P5": 0.53
   },
-  "oos_err_std_pct": 0.57,
+  "oos_err_std_pct": 0.61,
+  "top10_coverage": 0.8316,
+  "top10_coverage_live": 0.8316,
+  "top10_live_count": 10,
+  "undisclosed_ratio": 0.1684,
+  "data_quality": {
+    "ok": true,
+    "score": 1.0,
+    "warnings": [],
+    "errors": [],
+    "realtime_degraded": {},
+    "nav_rows": 200,
+    "nav_lag_days": 1
+  },
   "intraday": {
     "optical": 5.28,
     "pcb": 1.47,

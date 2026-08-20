@@ -4,15 +4,27 @@
 fetch_all.py —— 拉取 006010 估值模型所需的全部历史数据到本地缓存。
 输出：
   cache/nav.json      {dates:[...], navs:[...]}  按日期升序
-  cache/klines.json   {code: {date: close}}       各成分股 + 市场指数日线收盘价(前复权)
+  cache/klines.json   {group: {code: {date: close}}}  **只存正式收盘价**(前复权)
+  cache/intraday.json 盘中实时快照（date/settled/ts/prices），永不混入 klines.json
 不依赖任何第三方库，仅用标准库。
+
+【数据纪律 · 与 fetch_cloud.py 完全一致（优化意见 §6）】
+  腾讯日 K 盘中会返回当天一行、其"收盘价"实为当前价；结算前抓到的当天价格一律
+  移入 intraday.json 并标 settled=false，避免污染滚动回归 β/θ、误差统计与回测。
 """
-import json, os, urllib.request, urllib.parse, time
+import json, os, urllib.request, urllib.parse, time, datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 CACHE = os.path.join(ROOT, "cache")
 os.makedirs(CACHE, exist_ok=True)
+
+CST = datetime.timezone(datetime.timedelta(hours=8))
+NOW_CST = datetime.datetime.now(CST)
+TODAY = NOW_CST.date().isoformat()
+BEG = (NOW_CST.date() - datetime.timedelta(days=260)).isoformat()
+SETTLED = (NOW_CST.hour, NOW_CST.minute) >= (15, 5)
+LIVE = {}
 
 UA = {"User-Agent": "Mozilla/5.0", "Referer": "https://fundf10.eastmoney.com/"}
 
@@ -62,7 +74,25 @@ def ts_symbol(code):
         return "sh" + code
     return "sz" + code
 
-def fetch_kline(code, beg="2026-01-01", end="2026-08-20"):
+def fetch_live(sym):
+    """实时行情当前价（盘中价，不得当作收盘价）。"""
+    try:
+        q = f"https://qt.gtimg.cn/q={sym}"
+        raw = urllib.request.urlopen(urllib.request.Request(q, headers={
+            "User-Agent": "Mozilla/5.0"}), timeout=15).read().decode("gbk", "ignore")
+        m = __import__("re").search(r'v_(\w+)=\"([^\"]+)\"', raw)
+        if m:
+            cur = float(m.group(2).split("~")[3])
+            if cur > 0:
+                return cur
+    except Exception:
+        pass
+    return None
+
+def fetch_kline(code, beg=None, end=None, live_sink=None):
+    """返回**只含正式收盘价**的 {date: close}；当天价格结算前移入 live_sink。"""
+    beg = beg or BEG
+    end = end or TODAY
     sym = ts_symbol(code)
     url = (f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
            f"?param={sym},day,{beg},{end},400,qfq")
@@ -78,20 +108,15 @@ def fetch_kline(code, beg="2026-01-01", end="2026-08-20"):
             break
         except Exception:
             time.sleep(1.0 * (attempt + 1))
-    # 腾讯日K长窗口当天数据更新滞后 → 用实时行情接口补当天收盘价
-    if end not in out:
-        try:
-            q = f"https://qt.gtimg.cn/q={sym}"
-            raw = urllib.request.urlopen(urllib.request.Request(q, headers={
-                "User-Agent": "Mozilla/5.0"}), timeout=15).read().decode("gbk", "ignore")
-            m = __import__("re").search(r'v_(\w+)=\"([^\"]+)\"', raw)
-            if m:
-                p = m.group(2).split("~")
-                cur = float(p[3])
-                if cur > 0:
-                    out[end] = cur
-        except Exception:
-            pass
+
+    today_px = out.pop(TODAY, None)      # 无条件摘出，防止盘中价冒充收盘价
+    if today_px is None:
+        today_px = fetch_live(sym)
+    if today_px:
+        if SETTLED:
+            out[TODAY] = today_px
+        if live_sink is not None:
+            live_sink[code] = today_px
     if not out:
         print(f"  kline fail {code}")
     return out
@@ -111,17 +136,33 @@ def fetch_all_klines():
     result = {}
     for grp, codes in baskets.items():
         result[grp] = {}
+        sink = LIVE.setdefault(grp, {})
         for c in codes:
             print(f"  kline {grp} {c} ...")
-            result[grp][c] = fetch_kline(c)
+            result[grp][c] = fetch_kline(c, live_sink=sink)
             time.sleep(0.4)
     json.dump(result, open(os.path.join(CACHE, "klines.json"), "w"), ensure_ascii=False)
     tot = sum(len(v) for g in result.values() for v in g.values())
-    print(f"[klines] 共 {tot} 条收盘价记录")
+    print(f"[klines] 共 {tot} 条正式收盘价"
+          + (f"（含今日 {TODAY}）" if SETTLED else f"（不含今日 {TODAY}）"))
+
+def write_intraday():
+    n = sum(len(v) for v in LIVE.values())
+    snap = {
+        "date": TODAY, "settled": SETTLED,
+        "ts": NOW_CST.isoformat(timespec="seconds"),
+        "source": "qt.gtimg.cn realtime" if not SETTLED else "收盘后抓取，等同正式收盘价",
+        "n_codes": n, "prices": LIVE,
+        "note": "settled=false → 下游用 core.strip_unsettled() 剔除该日期",
+    }
+    json.dump(snap, open(os.path.join(CACHE, "intraday.json"), "w"), ensure_ascii=False)
+    print(f"[intraday] {TODAY} settled={SETTLED} 快照 {n} 只 → cache/intraday.json")
 
 if __name__ == "__main__":
-    print("=== 抓取 006010 估值数据 ===")
+    print(f"=== 抓取 006010 估值数据 (北京时间 {NOW_CST.strftime('%H:%M')}, "
+          f"收盘结算={SETTLED}) ===")
     fetch_nav()
     print("=== 抓取成分股日线 ===")
     fetch_all_klines()
+    write_intraday()
     print("=== 完成，已写入 cache/ ===")

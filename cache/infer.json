@@ -9,10 +9,10 @@
   },
   "group_exposure_lasso": {
     "semis": 0.0007,
-    "market": 0.0,
+    "optical": 0.9263,
     "pcb": 0.073,
-    "distract": 0.0,
-    "optical": 0.9263
+    "market": 0.0,
+    "distract": 0.0
   },
   "distract_total_weight": 0.0,
   "corr_with_q2": 0.211,

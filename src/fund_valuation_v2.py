@@ -344,7 +344,15 @@ for k in weights:
 
 P_final = sum(weights[k] * models[k] for k in models)
 P_final_corr = P_final + err_med   # 历史偏差修正
-nav_prev = navs[-1]
+# 估算目标日 = 最新行情日（COMMON_D[-1]）；nav_prev 应取"目标日的前一交易日净值"
+# 若目标日净值已公布（navs 最后日期 == 目标日），nav_prev 取 navs[-2]，否则取 navs[-1]
+target_date = COMMON_D[-1]
+if dates[-1] == target_date:
+    nav_prev = navs[-2]
+    nav_prev_date = dates[-2]
+else:
+    nav_prev = navs[-1]
+    nav_prev_date = dates[-1]
 nav_center = nav_prev * (1 + P_final_corr / 100)
 band = 1.5 * err_std
 lo_band, hi_band = P_final_corr - band, P_final_corr + band
@@ -391,7 +399,7 @@ else:
 print("\n" + "=" * 64)
 print("006010 盘中估值 v3 · 多模型组合（按修改意见重构）")
 print("=" * 64)
-print(f"上一交易日单位净值: {nav_prev} ({COMMON_D[-1]})")
+print(f"估算基准净值: {nav_prev} ({nav_prev_date}) → 目标日 {target_date}")
 print("-" * 64)
 for k in models:
     print(f"  {k:<12} {models[k]:+.2f}%   (权重 {weights[k]*100:.0f}%)")
@@ -408,7 +416,10 @@ print("=" * 64)
 
 result = {
     "version": "v3",
-    "cur_date": COMMON_D[-1], "nav_prev": nav_prev,
+    "cur_date": COMMON_D[-1],
+    "target_date": COMMON_D[-1],
+    "nav_prev": nav_prev,
+    "nav_prev_date": nav_prev_date,
     "models": {k: round(float(v), 2) for k, v in models.items()},
     "model_weights": {k: round(float(w), 3) for k, w in weights.items()},
     "P_final": round(float(P_final), 2),
@@ -431,7 +442,28 @@ result = {
                  "semis": round(intr_sem, 2), "market": round(intr_mkt, 2),
                  "q2_now": round(r_q2_now, 2)},
     "factor_corr": {"opt_pcb": round(float(_corr[0, 1]), 3)},
+    # 官方实际净值（若估算目标日净值已公布）→ 供页面/推送做"官方 vs 估算"对比
+    "official_nav": None,
+    "official_chg": None,
+    "official_date": None,
 }
+# 读取 last_nav.json（由 nav_watch.py 写入），若官方净值已公布则填入
+try:
+    _ln = json.load(open(os.path.join(CACHE, "last_nav.json"), encoding="utf-8"))
+    if _ln.get("date") == result["target_date"]:
+        result["official_nav"] = _ln.get("nav")
+        try:
+            result["official_chg"] = round(float(_ln.get("chg")), 2)
+        except (TypeError, ValueError):
+            result["official_chg"] = None
+        result["official_date"] = _ln.get("date")
+except Exception:
+    pass
 json.dump(result, open(os.path.join(CACHE, "result.json"), "w", encoding="utf-8"),
           ensure_ascii=False, indent=2)
 print("[已保存] cache/result.json (v3 格式)")
+if result["official_nav"] is not None:
+    print(f"[官方净值] {result['official_date']} = {result['official_nav']} "
+          f"({result['official_chg']:+.2f}%)  模型估算 {result['P_final_corr']:+.2f}%")
+else:
+    print(f"[官方净值] 未公布（模型估算目标日 {result['target_date']} 净值未出）")

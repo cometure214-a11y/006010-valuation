@@ -336,22 +336,38 @@ def build_html(d):
         mae_txt = f"P1 {mae_p1:.2f} | P2 {mae_p2:.2f} | P3 {mae_p3:.2f}"
 
         spark_in_hero = spark_html
-        # 估算目标日：cur=最新已公布净值日；若今天净值已公布(cur==今天) → 目标=下一交易日
         import datetime as _dt
-        cur_dt = _dt.date.fromisoformat(cur)
-        today = _dt.date.today()
-        if cur_dt >= today:
-            nxt = cur_dt + _dt.timedelta(days=1)
-            while nxt.weekday() >= 5:   # 跳过周末
-                nxt += _dt.timedelta(days=1)
-            target = nxt.isoformat()
-            lbl = f"下一交易日估算（{target}）"
-        else:
-            target = cur
-            lbl = f"今日盘中估算（{cur}）"
-        ref_txt = f"较上一交易日 <b>{nav_prev}</b>（{cur}）"
+        cur = d.get("cur_date", "")
+        target = d.get("target_date", cur)
+        nav_prev_date = d.get("nav_prev_date", cur)
+        # 官方净值是否已公布（由模型读取 last_nav.json 填入）
+        official_nav = d.get("official_nav")
+        official_chg = d.get("official_chg")
+        official_date = d.get("official_date")
 
-        range_bar = build_range_bar(band[0], band[1], center)
+        if official_nav is not None and official_chg is not None:
+            # ── 官方已公布：主数字=官方实际，副行=模型对比 ──
+            hero_main = official_chg
+            hero_sub = f"官方净值 <b>{official_nav}</b>"
+            hero_ref = f"较上一交易日 <b>{nav_prev}</b>（{nav_prev_date}）· 模型估算 {center:+.2f}%"
+            diff = official_chg - center
+            lbl = f"今日官方净值（{official_date}）"
+            badge = "官方 + 模型"
+            diff_txt = f"（模型差 {diff:+.2f}pp）" if abs(diff) > 0.005 else "（模型一致）"
+            hero_ref += f" {diff_txt}"
+        else:
+            # ── 官方未公布（盘中）：主数字=模型估算 ──
+            hero_main = center
+            hero_sub = f"预计净值 <b>{nav_center}</b>"
+            hero_ref = f"较上一交易日 <b>{nav_prev}</b>（{nav_prev_date}）"
+            today = _dt.date.today().isoformat()
+            if cur >= today:
+                lbl = f"今日盘中估算（{cur}）"
+            else:
+                lbl = f"盘中估算（{cur}）"
+            badge = "模型 v3"
+
+        range_bar = build_range_bar(band[0], band[1], float(hero_main))
         intraday = d.get("intraday", {})
         sector_bars = build_sector_bars(intraday)
 
@@ -359,11 +375,11 @@ def build_html(d):
 <div class="hero">
   <div class="top-row">
     <span class="lbl">{lbl}</span>
-    <span class="badge">模型 v3</span>
+    <span class="badge">{badge}</span>
   </div>
-  <div class="main {cl(center)}">{center:+.2f}%</div>
-  <div class="sub">预计净值 <b>{nav_center}</b></div>
-  <div class="ref">{ref_txt}</div>
+  <div class="main {cl(float(hero_main))}">{hero_main:+.2f}%</div>
+  <div class="sub">{hero_sub}</div>
+  <div class="ref">{hero_ref}</div>
   {spark_in_hero}
 </div>"""
 
@@ -371,7 +387,7 @@ def build_html(d):
 <div class="metrics">
   <div class="m m-range">
     <div class="v">{band[0]:+.2f}% ~ {band[1]:+.2f}%</div>
-    <div class="l">合理区间（{center:+.2f}%）</div>
+    <div class="l">模型合理区间（{center:+.2f}%）</div>
     {range_bar}
   </div>
   <div class="m">
@@ -401,6 +417,14 @@ def build_html(d):
 <div class="list" id="rt_list"></div>
 </div></details>
 <div class="card" id="rt_loading"><div class="loading">正在获取实时行情…</div></div>
+
+<details class="card"><summary>官方 vs 模型 <span class="arr">›</span></summary><div class="detail">
+  <div class="row"><span class="k">官方净值（{official_date or '未公布'}）</span><span class="v2">{official_nav if official_nav is not None else '--'} {f'({official_chg:+.2f}%)' if official_chg is not None else ''}</span></div>
+  <div class="row"><span class="k">模型估算（{target}）</span><span class="v2">{center:+.2f}% → 预计 {nav_center}</span></div>
+  <div class="row"><span class="k">估算基准净值</span><span class="v2">{nav_prev}（{nav_prev_date}）</span></div>
+  <div class="row"><span class="k">模型偏差</span><span class="v2">{d.get('bias_correction',0):+.2f}%</span></div>
+  <div class="row"><span class="k">合理区间</span><span class="v2">{band[0]:+.2f}% ~ {band[1]:+.2f}%</span></div>
+</div></details>
 
 <details class="card"><summary>各模型预测 <span class="arr">›</span></summary><div class="detail">
   <div class="row"><span class="k">模型中心（误差加权）</span><span class="v2">{d.get('P_final',0):+.2f}%</span></div>

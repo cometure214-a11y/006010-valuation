@@ -55,10 +55,16 @@ def build_desp(d):
         lines.append(f"净值：**{last.get('nav', '--')}** ｜ 当日涨跌：**{chg_txt}**")
         lines.append(f"日期：{last.get('date', '--')}")
         lines.append("")
-    # ── 第二段：模型估算（下一交易日） ──
-    lines.append("**🤖 模型估算（下一交易日）**")
-    lines.append(f"估算涨跌：**{d.get('P_final_corr', 0):+.2f}%**")
-    lines.append(f"预计净值：{d.get('nav_center', '--')}（较前值 {d.get('nav_prev', '--')}）")
+    # ── 第二段：模型估算（同一交易日） + 偏差对比 ──
+    target = d.get("target_date", d.get("cur_date", ""))
+    official_chg = d.get("official_chg")
+    est = d.get("P_final_corr", 0)
+    lines.append(f"**🤖 模型估算（{target}）**")
+    lines.append(f"估算涨跌：**{est:+.2f}%**")
+    if official_chg is not None:
+        diff = float(official_chg) - est
+        lines.append(f"模型偏差：**{diff:+.2f}pp**（估算 vs 官方）")
+    lines.append(f"预计净值：{d.get('nav_center', '--')}（基准 {d.get('nav_prev', '--')}）")
     lines.append(f"合理区间：{d.get('band_pct', [0, 0])[0]:+.2f}% ~ {d.get('band_pct', [0, 0])[1]:+.2f}%")
     lines.append(f"置信度：{d.get('confidence', '-')} | PCB信号：{d.get('pcb_signal', '-')}")
     models = d.get("models", {})

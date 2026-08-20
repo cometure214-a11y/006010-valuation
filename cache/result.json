@@ -1,7 +1,9 @@
 {
   "version": "v3",
   "cur_date": "2026-08-20",
-  "nav_prev": 0.5558,
+  "target_date": "2026-08-20",
+  "nav_prev": 0.5384,
+  "nav_prev_date": "2026-08-19",
   "models": {
     "P1_Q2静态": 4.39,
     "P2_调仓替代": 4.14,
@@ -19,7 +21,7 @@
   "P_final": 4.16,
   "bias_correction": -0.2,
   "P_final_corr": 3.97,
-  "nav_center": 0.5778,
+  "nav_center": 0.5597,
   "band_pct": [
     3.1,
     4.83
@@ -56,5 +58,8 @@
   },
   "factor_corr": {
     "opt_pcb": 0.711
-  }
+  },
+  "official_nav": 0.5558,
+  "official_chg": 3.23,
+  "official_date": "2026-08-20"
 }

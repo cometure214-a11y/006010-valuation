@@ -53,6 +53,10 @@ def load_last():
 
 def save_last(date, nav, chg):
     os.makedirs(CACHE, exist_ok=True)
+    try:
+        chg = float(chg)
+    except (TypeError, ValueError):
+        pass
     json.dump({"date": date, "nav": nav, "chg": chg},
               open(LAST_FILE, "w", encoding="utf-8"))
 

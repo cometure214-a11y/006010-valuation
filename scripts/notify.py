@@ -47,7 +47,10 @@ def build_desp(d):
     last = load_last_nav()
     if last:
         chg = last.get("chg")
-        chg_txt = f"{chg:+.2f}%" if isinstance(chg, (int, float)) else "--"
+        try:
+            chg_txt = f"{float(chg):+.2f}%"
+        except (TypeError, ValueError):
+            chg_txt = "--"
         lines.append("**📊 官方净值（实际）**")
         lines.append(f"净值：**{last.get('nav', '--')}** ｜ 当日涨跌：**{chg_txt}**")
         lines.append(f"日期：{last.get('date', '--')}")

@@ -28,6 +28,9 @@ TOP10 = [
     ("sz300394", 7.73), ("sz300308", 5.92),
 ]
 
+# PCB 候选篮子（模型调仓识别用，前端拉实时行情做调仓修正口径）
+PCB_BASKET = ["sz002916", "sz002463", "sz300476"]
+
 CSS = """
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0b0f15;color:#e6e9ef;
@@ -106,11 +109,16 @@ details[open] summary .arr{transform:rotate(90deg)}
 .detail .row .v2 small{font-size:10px;color:#5c6470;font-weight:500;margin-left:4px}
 
 /* 实时口径双数 + 归一化 tooltip */
-.rt-hero{display:flex;gap:10px;margin-bottom:10px}
-.rt-box{flex:1;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 8px;text-align:center;
+.rt-hero{display:flex;gap:8px;margin-bottom:8px}
+.rt-box{flex:1;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px;text-align:center;
         border:1px solid rgba(255,255,255,.05);position:relative}
+.rt-box.rt-main{background:rgba(78,201,176,.07);border:1px solid rgba(78,201,176,.25)}
 .rt-box .rt-lbl{font-size:10px;color:#8892a3;margin-bottom:4px}
-.rt-box .rt-val{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.rt-box .rt-val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.rt-box .rt-sub{font-size:9px;color:#5c6470;margin-top:3px}
+.rt-band{font-size:11px;color:#b8c0cc;background:rgba(255,255,255,.03);border-radius:8px;
+         padding:7px 10px;margin-bottom:8px;text-align:center}
+.rt-band b{font-variant-numeric:tabular-nums}
 .rt-box.norm::after{content:'?';position:absolute;top:6px;right:8px;width:16px;height:16px;
                     border-radius:50%;background:rgba(255,255,255,.08);color:#8892a3;
                     font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
@@ -147,8 +155,13 @@ JS = """
 const TOP10 = [
 __TOP10_JS__
 ];
+// 模型参数（由 gen_static 注入，用于三口径实时估算）
+const THETA_PCB = __THETA_PCB__;      // 光通信→PCB 有效替代比例
+const THETA_MKT = __THETA_MKT__;
+const PCB_CODES = __PCB_CODES__;      // PCB 篮子（模型候选池）
+
 function loadQuotes(){
-  const s = TOP10.map(t=>t.s).join(',');
+  const s = TOP10.map(t=>t.s).join(',') + ',' + PCB_CODES.join(',') + ',sz000852';
   const sc = document.createElement('script');
   sc.src = 'https://qt.gtimg.cn/q=' + s;
   sc.onload = calcRealtime;
@@ -162,7 +175,8 @@ function fmt(v,d){return (v>0?'+':'') + v.toFixed(d) + '%';}
 function cl(v){return v>0.005?'up':(v<-0.005?'down':'flat');}
 
 function calcRealtime(){
-  let num=0, wsum=0, n=0, rows='', sectors='';
+  let num=0, wsum=0, n=0, rows='';
+  let pcbVals=[], optVals=[];
   TOP10.forEach(t=>{
     const v = window['v_'+t.s];
     if(!v) return;
@@ -173,20 +187,55 @@ function calcRealtime(){
     num += (t.w/100)*r;
     wsum += t.w/100;
     n++;
+    optVals.push(r);
     rows += '<div class="item"><span><span class="code">'+p[2]+'</span><span class="w">'+t.w.toFixed(2)+'%</span></span>' +
             '<span class="ret '+cl(r)+'">'+(r>=0?'▲':'▼')+' '+fmt(r,2)+'</span></div>';
   });
+  PCB_CODES.forEach(c=>{
+    const v = window['v_'+c];
+    if(!v) return;
+    const p = v.split('~');
+    const cur = parseFloat(p[3]), prev = parseFloat(p[4]);
+    if(!prev) return;
+    pcbVals.push((cur-prev)/prev*100);
+  });
   if(n<5){document.getElementById('rt_loading').innerHTML='<div class="loading">行情解析异常，请稍后刷新</div>';return;}
-  const naive = num, norm = num/wsum;
+  // ── 三口径实时估算 ──
+  const conservative = num;                    // ① 保守：Q2权重，剩余仓位≈现金/未知
+  const pcbMean = pcbVals.length ? pcbVals.reduce((a,b)=>a+b,0)/pcbVals.length : 0;
+  const adjusted = num + THETA_PCB*(pcbMean - num) + THETA_MKT*(mktPct() - num);  // ② 调仓修正
+  const normalized = num/wsum;                 // ③ 归一化：前十大=全仓假设
+  const optMean = optVals.length ? optVals.reduce((a,b)=>a+b,0)/optVals.length : 0;
+
   document.getElementById('rt_box').style.display='block';
   document.getElementById('rt_loading').style.display='none';
-  const chg = document.getElementById('rt_chg');
-  chg.textContent = fmt(naive,2);
-  chg.className = 'rt-val '+cl(naive);
-  document.getElementById('rt_norm_val').textContent = fmt(norm,2);
-  document.getElementById('rt_norm_val').className = 'rt-val '+cl(norm);
   document.getElementById('now').textContent = new Date().toLocaleString('zh-CN',{hour12:false});
+  // 保守口径
+  setVal('rt_con', conservative, 'rt_con_box');
+  // 调仓口径（主推）
+  setVal('rt_adj', adjusted, 'rt_adj_box');
+  // 归一化口径
+  setVal('rt_norm_val', normalized, 'rt_norm_box');
+  // 区间提示
+  const lo = Math.min(conservative, adjusted, normalized);
+  const hi = Math.max(conservative, adjusted, normalized);
+  const spread = hi - lo;
+  document.getElementById('rt_band').innerHTML =
+    '三口径区间 <b>' + fmt(lo,2) + ' ~ ' + fmt(hi,2) + '</b>（跨度 ' + fmt(spread,2) + '）';
   document.getElementById('rt_list').innerHTML = rows;
+}
+function setVal(id, v, boxId){
+  const el = document.getElementById(id);
+  el.textContent = fmt(v,2);
+  el.className = 'rt-val ' + cl(v);
+  document.getElementById(boxId).className = 'rt-box' + (boxId==='rt_adj_box' ? ' rt-main' : '');
+}
+function mktPct(){
+  const v = window['v_sz000852'];
+  if(!v) return 0;
+  const p = v.split('~');
+  const cur = parseFloat(p[3]), prev = parseFloat(p[4]);
+  return prev ? (cur-prev)/prev*100 : 0;
 }
 loadQuotes();
 setInterval(loadQuotes, 60000);
@@ -289,7 +338,14 @@ def build_sector_bars(intraday):
 
 def build_html(d):
     top10_js = ",\n".join(f'  {{s:"{s}", w:{w}}}' for s, w in TOP10)
+    # 注入模型参数（θ_pcb / θ_mkt / PCB 篮子）供前端三口径实时估算
+    theta_pcb = (d or {}).get("theta_pcb", 0) or 0
+    theta_mkt = (d or {}).get("theta_mkt", 0) or 0
+    pcb_codes = "[" + ",".join(f'"{c}"' for c in PCB_BASKET) + "]"
     js = JS.replace("__TOP10_JS__", top10_js)
+    js = js.replace("__THETA_PCB__", f"{theta_pcb:.4f}")
+    js = js.replace("__THETA_MKT__", f"{theta_mkt:.4f}")
+    js = js.replace("__PCB_CODES__", pcb_codes)
 
     def cl(v):
         return "up" if v > 0.0001 else ("down" if v < -0.0001 else "flat")
@@ -403,16 +459,19 @@ def build_html(d):
 </div>"""
 
         details = f"""
-<details class="card" id="rt_box"><summary>实时行情快照（Q2口径） <span class="arr">›</span></summary>
+<details class="card" id="rt_box"><summary>实时行情快照（三口径） <span class="arr">›</span></summary>
 <div class="detail">
 <div class="rt-hero">
-  <div class="rt-box"><div class="rt-lbl">简单加权</div><div class="rt-val" id="rt_chg">--</div></div>
-  <div class="rt-box norm"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div></div>
+  <div class="rt-box" id="rt_con_box"><div class="rt-lbl">保守口径</div><div class="rt-val" id="rt_con">--</div><div class="rt-sub">剩余仓位≈现金</div></div>
+  <div class="rt-box" id="rt_adj_box"><div class="rt-lbl">调仓修正 ★</div><div class="rt-val" id="rt_adj">--</div><div class="rt-sub">θ_pcb={theta_pcb*100:.1f}%</div></div>
+  <div class="rt-box" id="rt_norm_box"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div><div class="rt-sub">前十大=全仓</div></div>
 </div>
 <div class="rt-tip">
-<b>简单加权</b>=前十大股票实际权重×涨跌之和，仅覆盖约 85% 仓位。<br>
-<b>归一化</b>=把前十大缩放至 100%，假设"前十大=整个基金"——用于估算若持仓不变时的理论涨跌幅，与模型主数字交叉参考。
+<b>保守口径</b>=Q2前十大加权，剩余~15%仓位按现金/未知计（下限）。<br>
+<b>调仓修正</b>=叠加模型θ_pcb调仓信号（光通信→PCB），最贴近真实持仓（★主推）。<br>
+<b>归一化</b>=假设前十大=整个基金（上限），与保守口径构成合理区间。
 </div>
+<div class="rt-band" id="rt_band"></div>
 {sector_bars}
 <div class="list" id="rt_list"></div>
 </div></details>

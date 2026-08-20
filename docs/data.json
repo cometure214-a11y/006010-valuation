@@ -1,0 +1,61 @@
+{
+  "version": "v3",
+  "cur_date": "2026-08-19",
+  "nav_prev": 0.5384,
+  "models": {
+    "P1_Q2静态": 4.39,
+    "P2_调仓替代": 4.18,
+    "P3_行业因子": 4.36,
+    "P4_层级组合": 4.36,
+    "P5_个股辅助": 3.66
+  },
+  "model_weights": {
+    "P1_Q2静态": 0.16,
+    "P2_调仓替代": 0.164,
+    "P3_行业因子": 0.225,
+    "P4_层级组合": 0.225,
+    "P5_个股辅助": 0.225
+  },
+  "P_final": 4.18,
+  "bias_correction": -0.2,
+  "P_final_corr": 3.98,
+  "nav_center": 0.5598,
+  "band_pct": [
+    3.14,
+    4.82
+  ],
+  "model_spread_pct": 0.74,
+  "theta_pcb": 0.0707,
+  "theta_mkt": 0.0,
+  "pcb_signal": "中等信号",
+  "pcb_sensitivity": {
+    "60": 0.1052,
+    "20": 0.1546,
+    "10": 0.1914
+  },
+  "exposure": {
+    "光通信": 0.7854,
+    "PCB": 0.096,
+    "半导体": 0.0,
+    "市场": 0.0739
+  },
+  "residual": 0.0446,
+  "confidence": "高",
+  "mae": {
+    "P1": 0.63,
+    "P2": 0.61,
+    "P3": 0.43
+  },
+  "oos_err_std_pct": 0.56,
+  "intraday": {
+    "optical": 5.28,
+    "pcb": 1.47,
+    "semis": -0.78,
+    "market": 0.96,
+    "q2_now": 4.39
+  },
+  "factor_corr": {
+    "opt_pcb": 0.711
+  },
+  "snapshot_time": "2026-08-20 18:31"
+}

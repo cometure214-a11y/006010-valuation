@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta http-equiv="refresh" content="600">
+<title>006010 盘中估值</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0b0f15;color:#e6e9ef;
+     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+     -webkit-font-smoothing:antialiased;padding-bottom:calc(env(safe-area-inset-bottom) + 8px)}
+.wrap{max-width:520px;margin:0 auto;padding:14px 16px 28px}
+.up{color:#f04e3c}.down{color:#30a46c}.flat{color:#e6e9ef}
+.up-bg{background:rgba(240,78,60,.12)}.down-bg{background:rgba(48,164,108,.12)}
+
+.hd{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 2px 14px}
+.fund{font-size:15.5px;font-weight:700;line-height:1.4}
+.fund small{display:block;font-size:11px;color:#8892a3;font-weight:500;margin-top:2px;letter-spacing:.5px}
+.time{font-size:11px;color:#6b7280;text-align:right;line-height:1.6}
+.time .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:#30a46c;
+            animation:pulse 1.6s infinite;margin-right:5px;vertical-align:middle}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ─── Hero 常驻层 ─── */
+.hero{position:relative;background:linear-gradient(165deg,#111820,#0d1319 70%);
+      border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:24px 22px 18px;text-align:center;
+      margin-bottom:10px;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+              background:radial-gradient(circle,rgba(240,78,60,.10) 0%,transparent 70%);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-30px;left:-30px;width:140px;height:140px;
+             background:radial-gradient(circle,rgba(78,201,176,.07) 0%,transparent 70%);pointer-events:none}
+.hero .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.hero .lbl{font-size:11.5px;color:#8892a3;letter-spacing:1.5px}
+.badge{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(78,201,176,.12);
+       color:#4ec9b0;font-weight:700;letter-spacing:.5px}
+.hero .main{font-size:76px;font-weight:800;line-height:1;letter-spacing:-3px;
+            font-variant-numeric:tabular-nums;
+            text-shadow:0 0 30px rgba(240,78,60,.25)}
+.hero .main.down{text-shadow:0 0 30px rgba(48,164,108,.25)}
+.hero .sub{font-size:16px;font-weight:600;margin-top:8px;color:#c6ccd6}
+.hero .sub b{font-size:22px;font-weight:800;color:#e6e9ef}
+.hero .ref{font-size:11.5px;color:#6b7280;margin-top:8px}
+.hero .ref b{color:#b8c0cc}
+
+/* sparkline */
+.spark{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05)}
+.spark svg{display:block;margin:0 auto;width:100%;height:44px}
+.spark .lbl-row{display:flex;justify-content:space-between;font-size:10px;color:#5c6470;margin-top:2px}
+
+/* ─── 关注层 ─── */
+.metrics{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.m{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;
+   padding:12px 8px;text-align:center;position:relative}
+.m .v{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;margin-bottom:4px}
+.m .l{font-size:10px;color:#8892a3}
+.m .sub-v{font-size:10px;color:#5c6470;margin-top:2px}
+.m-range .bar{position:relative;height:8px;border-radius:4px;
+              background:linear-gradient(90deg,#1a2634,#2a3a4a);margin:8px 6px 4px;overflow:hidden}
+.m-range .bar .fill{position:absolute;left:0;top:0;height:100%;border-radius:4px;
+                    background:linear-gradient(90deg,rgba(48,164,108,.4),rgba(240,78,60,.4))}
+.m-range .bar .marker{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;
+                      background:#e6e9ef;transform:translate(-50%,-50%);
+                      box-shadow:0 0 0 3px rgba(230,233,239,.2)}
+.pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.pill.strong{background:rgba(240,78,60,.15);color:#f04e3c}
+.pill.mid{background:rgba(220,202,106,.14);color:#dcdcaa}
+.pill.weak{background:rgba(139,148,163,.14);color:#a3adbd}
+.pill.high{background:rgba(48,164,108,.14);color:#30a46c}
+
+/* ─── 详情层 ─── */
+details.card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);
+             border-radius:14px;margin-bottom:8px;overflow:hidden}
+summary{padding:12px 16px;font-size:13px;font-weight:600;color:#c6ccd6;cursor:pointer;
+        display:flex;justify-content:space-between;align-items:center;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary .arr{color:#6b7280;font-size:11px;transition:transform .15s}
+details[open] summary .arr{transform:rotate(90deg)}
+.detail{padding:0 16px 12px}
+.detail .row{display:flex;justify-content:space-between;padding:6px 0;font-size:12.5px;
+             border-top:1px solid rgba(255,255,255,.04);align-items:center}
+.detail .row .k{color:#8892a3}.detail .row .v2{font-weight:600;font-variant-numeric:tabular-nums}
+.detail .row .v2 small{font-size:10px;color:#5c6470;font-weight:500;margin-left:4px}
+
+/* 实时口径双数 + 归一化 tooltip */
+.rt-hero{display:flex;gap:10px;margin-bottom:10px}
+.rt-box{flex:1;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 8px;text-align:center;
+        border:1px solid rgba(255,255,255,.05);position:relative}
+.rt-box .rt-lbl{font-size:10px;color:#8892a3;margin-bottom:4px}
+.rt-box .rt-val{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+.rt-box.norm::after{content:'?';position:absolute;top:6px;right:8px;width:16px;height:16px;
+                    border-radius:50%;background:rgba(255,255,255,.08);color:#8892a3;
+                    font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.rt-tip{font-size:10.5px;color:#6b7280;line-height:1.6;padding:8px 10px;background:rgba(255,255,255,.025);
+        border-radius:8px;margin-bottom:10px}
+
+/* 行业热力条 */
+.sector-row{display:flex;align-items:center;gap:8px;padding:5px 0}
+.sector-row .s-name{width:52px;font-size:11px;color:#8892a3;text-align:right}
+.sector-row .s-bar{flex:1;height:5px;border-radius:3px;background:#1a2030;overflow:hidden}
+.sector-row .s-fill{height:100%;border-radius:3px}
+.sector-row .s-val{width:52px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* 个股列表 */
+.list{display:flex;flex-direction:column;gap:5px;padding-top:8px}
+.item{display:flex;justify-content:space-between;align-items:center;
+      background:rgba(255,255,255,.025);border-radius:8px;padding:7px 11px;font-size:12px}
+.item .code{color:#8892a3;font-size:10.5px}.item .w{color:#5c6470;font-size:10.5px;margin-left:6px}
+.item .ret{font-weight:700;font-variant-numeric:tabular-nums;font-size:12px}
+
+/* 底部 */
+.foot{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.btn{display:block;width:100%;padding:12px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;
+     background:#1c2530;color:#c6ccd6;border:1px solid rgba(255,255,255,.07)}
+.btn:active{background:#26313f}
+.hint{font-size:10px;color:#5c6470;text-align:center;line-height:1.7}
+
+.loading{color:#8892a3;font-size:12px;text-align:center;padding:14px 0}
+#rt_box{display:none}
+.tip{font-size:10.5px;color:#6b7280;line-height:1.6;padding-top:6px}
+</style></head><body><div class="wrap">
+
+<div class="hd">
+  <div class="fund">006010 国融融银混合C<small>盘中估值 · 打开即刷新</small></div>
+  <div class="time"><span class="live"></span><span id="now">--</span><br>上次模型 2026-08-20 18:31</div>
+</div>
+
+
+<div class="hero">
+  <div class="top-row">
+    <span class="lbl">今日估算涨跌幅</span>
+    <span class="badge">模型 v3</span>
+  </div>
+  <div class="main up">+3.98%</div>
+  <div class="sub">预计净值 <b>0.5598</b></div>
+  <div class="ref">较上一交易日 <b>0.5384</b>（2026-08-19）</div>
+  
+<div class="spark">
+<svg viewBox="0 0 440 44" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="spArea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#30a46c" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#30a46c" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path d="M6.0,38.0 L48.8,30.4 L91.6,32.5 L134.4,36.2 L177.2,24.8 L220.0,26.0 L262.8,19.0 L305.6,6.0 L348.4,7.4 L391.2,30.0 L434.0,20.5 L434.0,38 L6.0,38 Z" fill="url(#spArea)"/>
+  <path d="M6.0,38.0 L48.8,30.4 L91.6,32.5 L134.4,36.2 L177.2,24.8 L220.0,26.0 L262.8,19.0 L305.6,6.0 L348.4,7.4 L391.2,30.0 L434.0,20.5" fill="none" stroke="#30a46c" stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="434.0" cy="20.5" r="3" fill="#48c9b0" stroke="#0b0f15" stroke-width="1.5"/>
+</svg>
+<div class="lbl-row"><span>08-06</span><span></span></div>
+</div>
+</div>
+
+<div class="metrics">
+  <div class="m m-range">
+    <div class="v">+3.14% ~ +4.82%</div>
+    <div class="l">合理区间（+3.98%）</div>
+    
+<div class="bar">
+  <div class="fill" style="width:50.0%"></div>
+  <div class="marker" style="left:50.0%"></div>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:10px;color:#5c6470;margin-top:2px;padding:0 4px">
+  <span>+3.14%</span><span>+4.82%</span>
+</div>
+  </div>
+  <div class="m">
+    <div class="v"><span class="pill high">高</span></div>
+    <div class="l">置信度</div>
+    <div class="sub-v">MAE 0.43%</div>
+  </div>
+  <div class="m">
+    <div class="v"><span class="pill mid">中等信号</span></div>
+    <div class="l">PCB 调仓</div>
+    <div class="sub-v">θ 7.1%</div>
+  </div>
+</div>
+
+
+<details class="card" id="rt_box"><summary>实时行情快照（Q2口径） <span class="arr">›</span></summary>
+<div class="detail">
+<div class="rt-hero">
+  <div class="rt-box"><div class="rt-lbl">简单加权</div><div class="rt-val" id="rt_chg">--</div></div>
+  <div class="rt-box norm"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div></div>
+</div>
+<div class="rt-tip">
+<b>简单加权</b>=前十大股票实际权重×涨跌之和，仅覆盖约 85% 仓位。<br>
+<b>归一化</b>=把前十大缩放至 100%，假设"前十大=整个基金"——用于估算若持仓不变时的理论涨跌幅，与模型主数字交叉参考。
+</div>
+
+<div class="sector-row">
+  <span class="s-name">光通信</span>
+  <span class="s-bar"><span class="s-fill" style="width:100.0%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+5.28%</span>
+</div>
+<div class="sector-row">
+  <span class="s-name">PCB</span>
+  <span class="s-bar"><span class="s-fill" style="width:27.8%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+1.47%</span>
+</div>
+<div class="sector-row">
+  <span class="s-name">半导体</span>
+  <span class="s-bar"><span class="s-fill" style="width:14.8%;background:#30a46c"></span></span>
+  <span class="s-val" style="color:#30a46c">-0.78%</span>
+</div>
+<div class="sector-row">
+  <span class="s-name">市场</span>
+  <span class="s-bar"><span class="s-fill" style="width:18.2%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+0.96%</span>
+</div>
+<div class="list" id="rt_list"></div>
+</div></details>
+<div class="card" id="rt_loading"><div class="loading">正在获取实时行情…</div></div>
+
+<details class="card"><summary>各模型预测 <span class="arr">›</span></summary><div class="detail">
+  <div class="row"><span class="k">模型中心（误差加权）</span><span class="v2">+4.18%</span></div>
+  <div class="row"><span class="k">历史偏差修正</span><span class="v2">-0.20%</span></div>
+  <div class="row"><span class="k">各模型 MAE</span><span class="v2"><small>P1 0.63 | P2 0.61 | P3 0.43</small></span></div>
+  <div class="row"><span class="k">模型明细</span><span class="v2" style="font-size:11.5px">Q2静态 +4.39%  调仓替代 +4.18%  行业因子 +4.36%  层级组合 +4.36%  个股辅助 +3.66%</span></div>
+</div></details>
+<details class="card"><summary>PCB 调仓信号 <span class="arr">›</span></summary><div class="detail">
+  <div class="row"><span class="k">有效替代比例 θ</span><span class="v2">7.1%</span></div>
+  <div class="row"><span class="k">信号强度</span><span class="v2"><span class="pill mid">中等信号</span></span></div>
+  <div class="row"><span class="k">暴露：光通信</span><span class="v2">78.5%</span></div>
+  <div class="row"><span class="k">暴露：PCB</span><span class="v2">9.6%</span></div>
+  <div class="tip">θ=模型估计从 Q2 组合切到 PCB 的有效比例，非真实持仓；光通信与 PCB 相关性 r≈0.71，存在识别误差。</div>
+</div></details>
+
+<div class="foot">
+<button class="btn" onclick="location.reload()">立即刷新</button>
+<div class="hint">主数字=完整模型估算（v3 五模型集成+偏差修正）· 详情=实时口径/模型明细/调仓信号<br>
+更新完整模型：本地「一键更新并推送.bat」或 GitHub Actions 手动 Run · 数据非官方净值</div>
+</div>
+
+<script>
+const TOP10 = [
+  {s:"sh688498", w:9.63},
+  {s:"sh688048", w:9.36},
+  {s:"sz300502", w:9.36},
+  {s:"sh688313", w:8.42},
+  {s:"sz300620", w:8.35},
+  {s:"sz300548", w:8.24},
+  {s:"sz300570", w:8.18},
+  {s:"sh688025", w:7.97},
+  {s:"sz300394", w:7.73},
+  {s:"sz300308", w:5.92}
+];
+function loadQuotes(){
+  const s = TOP10.map(t=>t.s).join(',');
+  const sc = document.createElement('script');
+  sc.src = 'https://qt.gtimg.cn/q=' + s;
+  sc.onload = calcRealtime;
+  sc.onerror = function(){
+    document.getElementById('rt_loading').innerHTML =
+      '<div class="loading">实时行情获取失败（非交易时段或网络限制）</div>';
+  };
+  document.body.appendChild(sc);
+}
+function fmt(v,d){return (v>0?'+':'') + v.toFixed(d) + '%';}
+function cl(v){return v>0.005?'up':(v<-0.005?'down':'flat');}
+
+function calcRealtime(){
+  let num=0, wsum=0, n=0, rows='', sectors='';
+  TOP10.forEach(t=>{
+    const v = window['v_'+t.s];
+    if(!v) return;
+    const p = v.split('~');
+    const cur = parseFloat(p[3]), prev = parseFloat(p[4]);
+    if(!prev) return;
+    const r = (cur-prev)/prev*100;
+    num += (t.w/100)*r;
+    wsum += t.w/100;
+    n++;
+    rows += '<div class="item"><span><span class="code">'+p[2]+'</span><span class="w">'+t.w.toFixed(2)+'%</span></span>' +
+            '<span class="ret '+cl(r)+'">'+(r>=0?'▲':'▼')+' '+fmt(r,2)+'</span></div>';
+  });
+  if(n<5){document.getElementById('rt_loading').innerHTML='<div class="loading">行情解析异常，请稍后刷新</div>';return;}
+  const naive = num, norm = num/wsum;
+  document.getElementById('rt_box').style.display='block';
+  document.getElementById('rt_loading').style.display='none';
+  const chg = document.getElementById('rt_chg');
+  chg.textContent = fmt(naive,2);
+  chg.className = 'rt-val '+cl(naive);
+  document.getElementById('rt_norm_val').textContent = fmt(norm,2);
+  document.getElementById('rt_norm_val').className = 'rt-val '+cl(norm);
+  document.getElementById('now').textContent = new Date().toLocaleString('zh-CN',{hour12:false});
+  document.getElementById('rt_list').innerHTML = rows;
+}
+loadQuotes();
+setInterval(loadQuotes, 60000);
+</script>
+</div></body></html>

@@ -1,0 +1,8 @@
+# 缓存与本地环境不入库
+cache/
+gui_venv/
+__pycache__/
+*.pyc
+*.log
+__test_gui.bat
+pcb_raw.txt

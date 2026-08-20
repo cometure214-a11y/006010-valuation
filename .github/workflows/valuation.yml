@@ -69,7 +69,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/ cache/result.json cache/infer.json
+          git add docs/
+          git add -f cache/result.json cache/infer.json
           git diff --staged --quiet || git commit -m "更新估值数据 $(date -u +%Y-%m-%dT%H:%M)"
           git push
 

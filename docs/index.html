@@ -121,22 +121,45 @@ details[open] summary .arr{transform:rotate(90deg)}
 .loading{color:#8892a3;font-size:12px;text-align:center;padding:14px 0}
 #rt_box{display:none}
 .tip{font-size:10.5px;color:#6b7280;line-height:1.6;padding-top:6px}
+
+/* ─── v4：数据质量横幅 / 估算模式徽标 / 覆盖率条 ─── */
+.banner{display:flex;gap:8px;align-items:flex-start;border-radius:12px;padding:10px 12px;
+        margin-bottom:10px;font-size:11.5px;line-height:1.6}
+.banner.warn{background:rgba(220,202,106,.10);border:1px solid rgba(220,202,106,.22);color:#dcdcaa}
+.banner.err{background:rgba(240,78,60,.10);border:1px solid rgba(240,78,60,.26);color:#f0806f}
+.banner .ico{flex:none;font-weight:700}
+.banner b{color:#e6e9ef}
+.mode{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;letter-spacing:.3px}
+.mode.settled{background:rgba(48,164,108,.14);color:#30a46c}
+.mode.intraday{background:rgba(240,78,60,.13);color:#f04e3c}
+.mode.next{background:rgba(139,148,163,.14);color:#a3adbd}
+.cov{margin-top:8px}
+.cov .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;display:flex}
+.cov .bar i{display:block;height:100%}
+.cov .bar i.a{background:linear-gradient(90deg,#4ec9b0,#30a46c)}
+.cov .bar i.b{background:rgba(139,148,163,.30)}
+.cov .lg{display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-top:4px}
+.drop{font-size:10.5px;color:#6b7280;line-height:1.7;padding-top:6px;
+      border-top:1px dashed rgba(255,255,255,.07);margin-top:6px}
+.drop code{color:#a3adbd;font-size:10px}
+.wbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);margin-top:5px}
+.wbar i{display:block;height:100%}
 </style></head><body><div class="wrap">
 
 <div class="hd">
   <div class="fund">006010 国融融银混合C<small>盘中估值 · 打开即刷新</small></div>
-  <div class="time"><span class="live"></span><span id="now">--</span><br>上次模型 2026-08-20 22:58</div>
+  <div class="time"><span class="live"></span><span id="now">--</span><br>上次模型 2026-08-21 14:01</div>
 </div>
 
 
 <div class="hero">
   <div class="top-row">
-    <span class="lbl">今日官方净值（2026-08-20）</span>
+    <span class="lbl">今日官方净值（2026-08-21）</span>
     <span class="badge">官方 + 模型</span>
   </div>
-  <div class="main up">+3.23%</div>
-  <div class="sub">官方净值 <b>0.5558</b></div>
-  <div class="ref">较上一交易日 <b>0.5384</b>（2026-08-19）· 模型估算 +3.97% （模型差 -0.74pp）</div>
+  <div class="main up">+0.25%</div>
+  <div class="sub">官方净值 <b>0.5572</b></div>
+  <div class="ref">较上一交易日 <b>0.5572</b>（2026-08-21）· 模型估算 +0.41% （模型差 -0.16pp）</div>
   
 <div class="spark">
 <svg viewBox="0 0 440 44" preserveAspectRatio="none">
@@ -146,36 +169,36 @@ details[open] summary .arr{transform:rotate(90deg)}
       <stop offset="100%" stop-color="#30a46c" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <path d="M6.0,31.9 L48.8,34.1 L91.6,38.0 L134.4,25.9 L177.2,27.1 L220.0,19.8 L262.8,6.0 L305.6,7.5 L348.4,31.4 L391.2,23.2 L434.0,21.4 L434.0,38 L6.0,38 Z" fill="url(#spArea)"/>
-  <path d="M6.0,31.9 L48.8,34.1 L91.6,38.0 L134.4,25.9 L177.2,27.1 L220.0,19.8 L262.8,6.0 L305.6,7.5 L348.4,31.4 L391.2,23.2 L434.0,21.4" fill="none" stroke="#30a46c" stroke-width="1.5" stroke-linejoin="round"/>
-  <circle cx="434.0" cy="21.4" r="3" fill="#48c9b0" stroke="#0b0f15" stroke-width="1.5"/>
+  <path d="M6.0,34.1 L48.8,38.0 L91.6,25.9 L134.4,27.1 L177.2,19.8 L220.0,6.0 L262.8,7.5 L305.6,31.4 L348.4,23.2 L391.2,22.6 L434.0,21.5 L434.0,38 L6.0,38 Z" fill="url(#spArea)"/>
+  <path d="M6.0,34.1 L48.8,38.0 L91.6,25.9 L134.4,27.1 L177.2,19.8 L220.0,6.0 L262.8,7.5 L305.6,31.4 L348.4,23.2 L391.2,22.6 L434.0,21.5" fill="none" stroke="#30a46c" stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="434.0" cy="21.5" r="3" fill="#48c9b0" stroke="#0b0f15" stroke-width="1.5"/>
 </svg>
-<div class="lbl-row"><span>08-07</span><span></span></div>
+<div class="lbl-row"><span>08-10</span><span></span></div>
 </div>
 </div>
 
 <div class="metrics">
   <div class="m m-range">
-    <div class="v">+3.10% ~ +4.83%</div>
-    <div class="l">模型合理区间（+3.97%）</div>
+    <div class="v">-0.50% ~ +1.33%</div>
+    <div class="l">模型合理区间（+0.41%）</div>
     
 <div class="bar">
-  <div class="fill" style="width:8.0%"></div>
-  <div class="marker" style="left:7.5%"></div>
+  <div class="fill" style="width:41.0%"></div>
+  <div class="marker" style="left:41.0%"></div>
 </div>
 <div style="display:flex;justify-content:space-between;font-size:10px;color:#5c6470;margin-top:2px;padding:0 4px">
-  <span>+3.10%</span><span>+4.83%</span>
+  <span>-0.50%</span><span>+1.33%</span>
 </div>
   </div>
   <div class="m">
     <div class="v"><span class="pill high">高</span></div>
     <div class="l">置信度</div>
-    <div class="sub-v">MAE 0.44%</div>
+    <div class="sub-v">MAE 0.48%</div>
   </div>
   <div class="m">
     <div class="v"><span class="pill strong">强信号</span></div>
     <div class="l">PCB 调仓</div>
-    <div class="sub-v">θ 8.5%</div>
+    <div class="sub-v">θ 5.9%</div>
   </div>
 </div>
 
@@ -184,7 +207,7 @@ details[open] summary .arr{transform:rotate(90deg)}
 <div class="detail">
 <div class="rt-hero">
   <div class="rt-box" id="rt_con_box"><div class="rt-lbl">保守口径</div><div class="rt-val" id="rt_con">--</div><div class="rt-sub">剩余仓位≈现金</div></div>
-  <div class="rt-box" id="rt_adj_box"><div class="rt-lbl">调仓修正 ★</div><div class="rt-val" id="rt_adj">--</div><div class="rt-sub">θ_pcb=8.5%</div></div>
+  <div class="rt-box" id="rt_adj_box"><div class="rt-lbl">调仓修正 ★</div><div class="rt-val" id="rt_adj">--</div><div class="rt-sub">θ_pcb=5.9%</div></div>
   <div class="rt-box" id="rt_norm_box"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div><div class="rt-sub">前十大=全仓</div></div>
 </div>
 <div class="rt-tip">
@@ -196,47 +219,47 @@ details[open] summary .arr{transform:rotate(90deg)}
 
 <div class="sector-row">
   <span class="s-name">光通信</span>
-  <span class="s-bar"><span class="s-fill" style="width:100.0%;background:#f04e3c"></span></span>
-  <span class="s-val" style="color:#f04e3c">+5.28%</span>
+  <span class="s-bar"><span class="s-fill" style="width:19.8%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+0.66%</span>
 </div>
 <div class="sector-row">
   <span class="s-name">PCB</span>
-  <span class="s-bar"><span class="s-fill" style="width:27.8%;background:#f04e3c"></span></span>
-  <span class="s-val" style="color:#f04e3c">+1.47%</span>
+  <span class="s-bar"><span class="s-fill" style="width:100.0%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+3.33%</span>
 </div>
 <div class="sector-row">
   <span class="s-name">半导体</span>
-  <span class="s-bar"><span class="s-fill" style="width:14.8%;background:#30a46c"></span></span>
-  <span class="s-val" style="color:#30a46c">-0.78%</span>
+  <span class="s-bar"><span class="s-fill" style="width:6.6%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+0.22%</span>
 </div>
 <div class="sector-row">
   <span class="s-name">市场</span>
-  <span class="s-bar"><span class="s-fill" style="width:18.2%;background:#f04e3c"></span></span>
-  <span class="s-val" style="color:#f04e3c">+0.96%</span>
+  <span class="s-bar"><span class="s-fill" style="width:4.8%;background:#f04e3c"></span></span>
+  <span class="s-val" style="color:#f04e3c">+0.16%</span>
 </div>
 <div class="list" id="rt_list"></div>
 </div></details>
 <div class="card" id="rt_loading"><div class="loading">正在获取实时行情…</div></div>
 
 <details class="card"><summary>官方 vs 模型 <span class="arr">›</span></summary><div class="detail">
-  <div class="row"><span class="k">官方净值（2026-08-20）</span><span class="v2">0.5558 (+3.23%)</span></div>
-  <div class="row"><span class="k">模型估算（2026-08-20）</span><span class="v2">+3.97% → 预计 0.5597</span></div>
-  <div class="row"><span class="k">估算基准净值</span><span class="v2">0.5384（2026-08-19）</span></div>
-  <div class="row"><span class="k">模型偏差</span><span class="v2">-0.20%</span></div>
-  <div class="row"><span class="k">合理区间</span><span class="v2">+3.10% ~ +4.83%</span></div>
+  <div class="row"><span class="k">官方净值（2026-08-21）</span><span class="v2">0.5572 (+0.25%)</span></div>
+  <div class="row"><span class="k">模型估算（2026-08-24）</span><span class="v2">+0.41% → 预计 0.5595</span></div>
+  <div class="row"><span class="k">估算基准净值</span><span class="v2">0.5572（2026-08-21）</span></div>
+  <div class="row"><span class="k">模型偏差</span><span class="v2">-0.46%</span></div>
+  <div class="row"><span class="k">合理区间</span><span class="v2">-0.50% ~ +1.33%</span></div>
 </div></details>
 
 <details class="card"><summary>各模型预测 <span class="arr">›</span></summary><div class="detail">
-  <div class="row"><span class="k">模型中心（误差加权）</span><span class="v2">+4.16%</span></div>
-  <div class="row"><span class="k">历史偏差修正</span><span class="v2">-0.20%</span></div>
-  <div class="row"><span class="k">各模型 MAE</span><span class="v2"><small>P1 0.64 | P2 0.62 | P3 0.44</small></span></div>
-  <div class="row"><span class="k">模型明细</span><span class="v2" style="font-size:11.5px">Q2静态 +4.39%  调仓替代 +4.14%  行业因子 +4.35%  层级组合 +4.35%  个股辅助 +3.63%</span></div>
+  <div class="row"><span class="k">模型中心（误差加权）</span><span class="v2">+0.87%</span></div>
+  <div class="row"><span class="k">历史偏差修正</span><span class="v2">-0.46%</span></div>
+  <div class="row"><span class="k">各模型 MAE</span><span class="v2"><small>P1 0.59 | P2 0.58 | P3 0.48</small></span></div>
+  <div class="row"><span class="k">模型明细</span><span class="v2" style="font-size:11.5px">Q2静态 +0.57%  调仓替代 +0.73%  行业因子 +0.85%  层级组合 +0.87%  个股辅助 +0.59%</span></div>
 </div></details>
 <details class="card"><summary>PCB 调仓信号 <span class="arr">›</span></summary><div class="detail">
-  <div class="row"><span class="k">有效替代比例 θ</span><span class="v2">8.5%</span></div>
+  <div class="row"><span class="k">有效替代比例 θ</span><span class="v2">5.9%</span></div>
   <div class="row"><span class="k">信号强度</span><span class="v2"><span class="pill strong">强信号</span></span></div>
-  <div class="row"><span class="k">暴露：光通信</span><span class="v2">77.9%</span></div>
-  <div class="row"><span class="k">暴露：PCB</span><span class="v2">10.5%</span></div>
+  <div class="row"><span class="k">暴露：光通信</span><span class="v2">78.8%</span></div>
+  <div class="row"><span class="k">暴露：PCB</span><span class="v2">9.5%</span></div>
   <div class="tip">θ=模型估计从 Q2 组合切到 PCB 的有效比例，非真实持仓；光通信与 PCB 相关性 r≈0.71，存在识别误差。</div>
 </div></details>
 
@@ -260,7 +283,7 @@ const TOP10 = [
   {s:"sz300308", w:5.92}
 ];
 // 模型参数（由 gen_static 注入，用于三口径实时估算）
-const THETA_PCB = 0.0845;      // 光通信→PCB 有效替代比例
+const THETA_PCB = 0.0585;      // 光通信→PCB 有效替代比例
 const THETA_MKT = 0.0000;
 const PCB_CODES = ["sz002916","sz002463","sz300476"];      // PCB 篮子（模型候选池）
 

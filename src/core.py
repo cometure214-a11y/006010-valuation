@@ -48,12 +48,12 @@ THETA_MKT_HI = 0.25
 # 集成参数（方法文档 §十）
 # --- 集成参数：由 tests/backtest_v3.py --tune / --decide 在 112 日样本上选出 ---
 # 依据（2026-08-20 决策，见 cache/decide_report.json）：
-#   全段(72日)MAE 0.5402%，最差子段 0.6220%，跨段波动 0.1635pp
-#   同期 P4 单模型 0.5488%/0.6894%/0.2811pp、P1 静态 0.6084%/0.6220%/0.0272pp
+#   全段(112日)MAE 0.5449%，最差子段 0.6220%，跨段波动 0.1588pp
+#   同期 P4 单模型 0.5393%/0.6592%/0.2398pp、P1 静态 0.6084%/0.6220%/0.0272pp
 #   → 该组合在(全段MAE, 最差子段MAE)双准则下位于帕累托前沿
 MAE_FLOOR = 0.02          # w ∝ 1/(MAE + MAE_FLOOR)^MAE_POWER
 MAE_POWER = 2.0           # 锐度指数：2.0≈逆方差加权
-MAE_GATE = 1.15           # 劣质模型淘汰闸门：MAE 超过最优模型 1.15 倍的不参与集成
+MAE_GATE = 1.00           # 劣质模型淘汰闸门：MAE 超过最优模型 1.00 倍的不参与集成（择优模式）
 MODEL_WEIGHT_CAP = 0.70   # 单模型权重上限
 # 无"真实样本外误差"的模型（其 MAE 只是代理/借用值）的硬上限。
 # 背景：P5 个股反推曾用 max(MAE_P3, 0.4) 冒充自身误差，闸门上线后它凭假 MAE
@@ -69,27 +69,95 @@ MODEL_GROUPS = {
     "P5_个股辅助": "G4_个股反推",
 }
 
-# 2026 年中国 A 股法定休市日（不含周末）。缺失年份自动降级为"仅跳周末"。
-CN_HOLIDAYS_2026 = {
-    "2026-01-01", "2026-01-02",
-    "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20",
-    "2026-04-06",
-    "2026-05-01",
-    "2026-06-19",
-    "2026-09-25",
-    "2026-10-01", "2026-10-02", "2026-10-05", "2026-10-06", "2026-10-07",
+# 中国 A 股法定休市日（不含周末），按年份分组，支持多年份查询。
+# 来源：交易所公告 + 国务院放假通知。仅含全天休市，不含半日交易。
+CN_HOLIDAYS = {
+    2025: {
+        "2025-01-01", "2025-01-28", "2025-01-29", "2025-01-30", "2025-01-31",
+        "2025-02-03", "2025-02-04",
+        "2025-04-04", "2025-04-05", "2025-04-06",
+        "2025-05-01", "2025-05-02", "2025-05-03", "2025-05-04", "2025-05-05",
+        "2025-06-09", "2025-06-10", "2025-06-11",
+        "2025-09-15", "2025-09-16", "2025-09-17",
+        "2025-10-01", "2025-10-02", "2025-10-03", "2025-10-04", "2025-10-05",
+        "2025-10-06", "2025-10-07", "2025-10-08",
+    },
+    2026: {
+        "2026-01-01", "2026-01-02",
+        "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20",
+        "2026-04-04", "2026-04-05", "2026-04-06",
+        "2026-05-01", "2026-05-02", "2026-05-03", "2026-05-04", "2026-05-05",
+        "2026-06-19", "2026-06-20", "2026-06-21",
+        "2026-09-25", "2026-09-26", "2026-09-27",
+        "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05",
+        "2026-10-06", "2026-10-07", "2026-10-08",
+    },
+    2027: {
+        "2027-01-01",
+        "2027-02-11", "2027-02-12", "2027-02-13", "2027-02-14", "2027-02-15",
+        "2027-02-16", "2027-02-17",
+        "2027-04-03", "2027-04-04", "2027-04-05",
+        "2027-05-01", "2027-05-02", "2027-05-03", "2027-05-04",
+        "2027-06-14", "2027-06-15", "2027-06-16",
+        "2027-09-20", "2027-09-21", "2027-09-22",
+        "2027-10-01", "2027-10-02", "2027-10-03", "2027-10-04", "2027-10-05",
+        "2027-10-06", "2027-10-07",
+    },
 }
 
+def _get_holidays(year: int):
+    """获取指定年份的休市日集合，缺失年份返回空集（仅跳周末）"""
+    return CN_HOLIDAYS.get(year, set())
 
-# ============================================================
-# 1. 加权与回归
-# ============================================================
-def half_life_weights(n, half_life=HALF_LIFE):
-    """半衰期时间权重：越近权重越高（返回长度 n 的数组，末位=1.0）"""
+def is_trade_day(datestr, holidays=None):
+    """是否为交易日（排除周末与法定休市日）"""
+    if holidays is None:
+        year = int(datestr[:4])
+        holidays = _get_holidays(year)
+    d = dt.date.fromisoformat(datestr)
+    return d.weekday() < 5 and datestr not in holidays
+
+
+def next_trade_day(datestr, holidays=None, max_step=30):
+    """
+    下一交易日：跳过周末 + 法定休市日。
+    若 holidays 未覆盖该年份，退化为"仅跳周末"（安全降级，不会死循环）。
+    """
+    if holidays is None:
+        year = int(datestr[:4])
+        holidays = _get_holidays(year)
+    d = dt.date.fromisoformat(datestr)
+    for _ in range(max_step):
+        d += dt.timedelta(days=1)
+        s = d.isoformat()
+        if d.weekday() < 5 and s not in holidays:
+            return s
+    return d.isoformat()
+
+
+def prev_trade_day(datestr, holidays=None, max_step=30):
+    """上一交易日（同样跳周末+休市日）"""
+    if holidays is None:
+        year = int(datestr[:4])
+        holidays = _get_holidays(year)
+    d = dt.date.fromisoformat(datestr)
+    for _ in range(max_step):
+        d -= dt.timedelta(days=1)
+        s = d.isoformat()
+        if d.weekday() < 5 and s not in holidays:
+            return s
+    return d.isoformat()
+
+
+def half_life_weights(n, half_life):
+    """
+    半衰期指数权重（越近权重越大），用于滚动回归。
+    返回长度 n 的权重数组（归一化，和为 1）。
+    """
     if n <= 0:
         return np.array([])
-    half_life = max(float(half_life), 1e-6)
-    return np.array([0.5 ** ((n - 1 - i) / half_life) for i in range(n)])
+    w = np.exp(-np.log(2) * np.arange(n - 1, -1, -1) / half_life)
+    return w / w.sum()
 
 
 def constrained_regression(y_win, x_win, weights, prior=None, prev_beta=None,
@@ -426,38 +494,8 @@ def top10_coverage(weights=None):
 # ============================================================
 # 3. 交易日历
 # ============================================================
-def is_trade_day(datestr, holidays=None):
-    """是否为交易日（排除周末与法定休市日）"""
-    holidays = CN_HOLIDAYS_2026 if holidays is None else holidays
-    d = dt.date.fromisoformat(datestr)
-    return d.weekday() < 5 and datestr not in holidays
-
-
-def next_trade_day(datestr, holidays=None, max_step=30):
-    """
-    下一交易日：跳过周末 + 法定休市日。
-    若 holidays 未覆盖该年份，退化为"仅跳周末"（安全降级，不会死循环）。
-    """
-    holidays = CN_HOLIDAYS_2026 if holidays is None else holidays
-    d = dt.date.fromisoformat(datestr)
-    for _ in range(max_step):
-        d += dt.timedelta(days=1)
-        s = d.isoformat()
-        if d.weekday() < 5 and s not in holidays:
-            return s
-    return d.isoformat()
-
-
-def prev_trade_day(datestr, holidays=None, max_step=30):
-    """上一交易日（同样跳周末+休市日）"""
-    holidays = CN_HOLIDAYS_2026 if holidays is None else holidays
-    d = dt.date.fromisoformat(datestr)
-    for _ in range(max_step):
-        d -= dt.timedelta(days=1)
-        s = d.isoformat()
-        if d.weekday() < 5 and s not in holidays:
-            return s
-    return d.isoformat()
+# 说明：is_trade_day / next_trade_day / prev_trade_day 已在前半段定义（使用多年份 CN_HOLIDAYS + _get_holidays），
+# 此处不再重复定义。若需引用请直接使用 core.is_trade_day 等。
 
 
 def market_session(now=None):
@@ -812,8 +850,12 @@ def check_date_consistency(target_date, nav_prev_date, nav_dates,
         if i >= 1 and nav_prev_date != nav_dates[i - 1]:
             problems.append(
                 f"目标日净值已公布，基准应取 {nav_dates[i-1]}，实际 {nav_prev_date}")
-    if official_date and target_date and official_date != target_date:
-        problems.append(f"官方净值日({official_date}) 与目标日({target_date}) 不一致，不应填充")
+    if official_date and target_date:
+        # 允许：官方净值日是目标日的上一交易日（估算下一交易日），或两者相同（估算当日）
+        expect_same = official_date == target_date
+        expect_prev = official_date == prev_trade_day(target_date, holidays)
+        if not (expect_same or expect_prev):
+            problems.append(f"官方净值日({official_date}) 与目标日({target_date}) 关系异常，预期相同或为上一交易日({prev_trade_day(target_date, holidays)})")
     if target_date and not is_trade_day(target_date, holidays):
         problems.append(f"目标日 {target_date} 非交易日")
     return (not problems), problems

@@ -213,7 +213,8 @@ errs_p3 = oos_errors(p3_pred)
 errs_p4 = oos_errors(p4_pred) if p4_pred else errs_p3
 errs_p1 = np.array([Yd[i] - Q2d[i] for i in range(len(Q2d))])
 
-K = min(40, len(errs_p2))
+# 使用 W_BASE(60) 窗口计算集成权重 MAE，与回测逐日重拟合一致，比 40 日更稳定
+K = min(W_BASE, len(errs_p2))
 err_mae_p1 = float(np.mean(np.abs(errs_p1[-K:])))
 err_mae_p2 = float(np.mean(np.abs(errs_p2[-K:])))
 err_mae_p3 = float(np.mean(np.abs(errs_p3[-K:])))
@@ -416,16 +417,17 @@ P_final_corr = P_final + err_med
 # ============================================================
 # 9. 目标日 / 基准净值 / 估算语义（v4：显式字段 + 自检）
 # ============================================================
+# 逻辑（优化意见：官方净值日期为权威交易日集合）：
+#   - 若目标日已发布官方净值(official_nav is not None)：估算的是【下一交易日】，基准取目标日净值
+#   - 若目标日未发布官方净值：估算的是【当前交易日(即最新NAV日期)】，基准取最新NAV日期净值
+#   - COMMON_D[-1] 是最新可用因子数据日期（通常等于最新NAV日期，但在休市后可能不同）
 target_date = COMMON_D[-1]
-if dates[-1] == target_date:
-    nav_prev, nav_prev_date = navs[-2], dates[-2]
-else:
-    nav_prev, nav_prev_date = navs[-1], dates[-1]
 
+# 判断是否有官方净值：last_nav.json 的 date == target_date 且 nav 字段存在
 official_nav = official_chg = official_date = None
 try:
     _ln = json.load(open(os.path.join(CACHE, "last_nav.json"), encoding="utf-8"))
-    if _ln.get("date") == target_date:
+    if _ln.get("date") == target_date and _ln.get("nav") is not None:
         official_nav = _ln.get("nav")
         official_date = _ln.get("date")
         try:
@@ -434,6 +436,16 @@ try:
             official_chg = None
 except Exception:
     pass
+
+if official_nav is not None:
+    # 官方净值已发布 → 估算下一交易日
+    target_date = core.next_trade_day(target_date)
+    nav_prev, nav_prev_date = navs[-1], dates[-1]  # 目标日当日净值作为基准
+else:
+    # 官方净值未发布 → 估算当前交易日（最新 NAV 日期）
+    # COMMON_D[-1] 通常就是 dates[-1]；若因休市导致不同，以 dates[-1] 为准
+    target_date = dates[-1]
+    nav_prev, nav_prev_date = navs[-1], dates[-1]
 
 est = core.resolve_estimation_mode(target_date, dates[-1], official_nav is not None)
 ok_date, date_problems = core.check_date_consistency(

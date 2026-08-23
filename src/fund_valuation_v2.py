@@ -40,17 +40,11 @@ from core import (TOP10, TOP10_W, SUM_W, BASKETS, FACTOR_LABELS,
                   W_BASE, W_SHORT, W_FAST, HALF_LIFE, MAE_FLOOR)
 
 NAME = {"optical": "光通信", "pcb": "PCB", "semis": "半导体", "market": "市场(中证1000)"}
-# P5 无历史序列，MAE 用保守代理值（不可用 P3 的 MAE 直接冒充，会高估其权重）
 P5_MAE_PROXY_FLOOR = 0.40
 
-# ============================================================
-# 1. 载入数据 + 上线体检（v4 新增）
-# ============================================================
 NAV = json.load(open(os.path.join(CACHE, "nav.json"), encoding="utf-8"))
 KL = json.load(open(os.path.join(CACHE, "klines.json"), encoding="utf-8"))
 
-# --- v4 数据卫生：剔除"盘中价冒充收盘价"的未结算日期（优化意见 §6）---
-# 幂等防御：无论取数脚本版本新旧、缓存是否为历史污染版本，这里一律先清洗。
 INTRA = {}
 try:
     INTRA = json.load(open(os.path.join(CACHE, "intraday.json"), encoding="utf-8"))
@@ -78,13 +72,10 @@ for w in dq["warnings"]:
 if not dq["ok"]:
     print("[中止] 数据源存在致命问题，拒绝输出估值（避免用坏数据误导决策）")
     sys.exit(2)
-print(f"[覆盖率] 前十大占净值 {SUM_W*100:.2f}% —— 估值精度的物理上限，"
+print(f"[覆盖率] 前十大占净值 {SUM_W*100:.2f}% —— 估值精度的物理上限,"
       f"剩余 {(1-SUM_W)*100:.2f}% 为未披露持仓/现金")
 
-# ============================================================
-# 2. 因子篮子与对齐
-# ============================================================
-BR = {g: core.basket_returns(KL[g], BASKETS[g]) for g in BASKETS}
+BR = {g: core.basket_returns_robust(KL[g], BASKETS[g], trim_mad=3.0) for g in BASKETS}
 
 dates, navs = NAV["dates"], NAV["navs"]
 fund_ret = {dates[i]: (navs[i] / navs[i - 1] - 1.0) * 100.0 for i in range(1, len(dates))}
@@ -94,7 +85,7 @@ common = sorted(set(fund_ret) & set(BR["optical"]) & set(BR["pcb"]) &
 X = np.array([[BR["optical"][d], BR["pcb"][d], BR["semis"][d], BR["market"][d]]
               for d in common])
 
-Q2d = core.q2_portfolio_returns(KL["optical"], common)   # 对应 common[1:]
+Q2d = core.q2_portfolio_returns(KL["optical"], common)
 Yd = np.array([fund_ret[d] for d in common[1:]])
 Xd = X[1:]
 PCBr = np.array([BR["pcb"][d] for d in common[1:]])
@@ -110,9 +101,6 @@ _corr = np.corrcoef(X.T)
 print(f"[因子相关性] 光通信~PCB r={_corr[0,1]:.2f} | 光通信~半导体 r={_corr[0,2]:.2f} | "
       f"光通信~市场 r={_corr[0,3]:.2f}")
 
-# ============================================================
-# 3. P2 滚动 θ（调仓替代比例模型）
-# ============================================================
 theta_pcb_hist, theta_m_hist, p2_pred = {}, {}, {}
 _prev_th = None
 for p in range(W_BASE, len(COMMON_D)):
@@ -128,9 +116,6 @@ theta_pcb_now = theta_pcb_hist[COMMON_D[-1]]
 theta_m_now = theta_m_hist[COMMON_D[-1]]
 print(f"[P2 调仓替代] θ_pcb={theta_pcb_now:.3f} θ_m={theta_m_now:.3f} (截至 {COMMON_D[-1]})")
 
-# ============================================================
-# 4. P3 滚动 β（行业因子模型）
-# ============================================================
 Q2_PRIOR = np.array([round(SUM_W, 2), 0.0, 0.0, 0.0])
 p3_beta_hist, p3_pred = {}, {}
 for p in range(W_BASE, len(COMMON_D)):
@@ -144,7 +129,6 @@ beta_cur = p3_beta_hist[COMMON_D[-1]]
 print("[P3 行业因子] " + ", ".join(f"{l}={beta_cur[i]:.3f}" for i, l in enumerate(FACTOR_LABELS))
       + f"  | 残差≈{1 - beta_cur.sum():.3f}")
 
-# PCB 敏感性（多窗口一致性 → 三级信号依据）
 sens = {}
 for ww in (W_BASE, W_SHORT, W_FAST):
     if len(COMMON_D) >= ww:
@@ -152,8 +136,6 @@ for ww in (W_BASE, W_SHORT, W_FAST):
         sens[ww] = core.constrained_regression(Yd[-ww:], Xd[-ww:], w, Q2_PRIOR, Q2_PRIOR)
 print("[PCB敏感性] " + ", ".join(f"{w}d={sens[w][1]:.3f}" for w in sorted(sens)))
 
-# --- v4 增量验证：加入 PCB 因子后，滚动样本外 MAE 是否真的下降 ---
-# 对照组：剔除 PCB 列（只留 光通信/半导体/市场）做同样的滚动样本外预测
 _IDX_NO_PCB = [0, 2, 3]
 Xd_np = Xd[:, _IDX_NO_PCB]
 Q2_PRIOR_NP = Q2_PRIOR[_IDX_NO_PCB]
@@ -166,7 +148,6 @@ for p in range(W_BASE, len(COMMON_D)):
     _prev_b = b
     p3_pred_nopcb[COMMON_D[p]] = float(Xd_np[p] @ b)
 
-# --- v4 多篮子稳健性：PCB 篮子留一法，检验 β_pcb 是否稳定为正 ---
 def pcb_leave_one_out():
     codes = BASKETS["pcb"]
     if len(codes) < 3:
@@ -192,13 +173,9 @@ basket_agree = _loo[0] if _loo else None
 if _loo:
     print(f"[PCB多篮子] 留一法 β_pcb={_loo[1]} → {'一致为正' if _loo[0] else '不一致'}")
 
-# ============================================================
-# 5. 样本外误差 + 偏差修正（v4：防滞后）
-# ============================================================
 def oos_errors(pred_dict):
     return np.array([fund_ret[d] - pred_dict[d] for d in sorted(pred_dict)])
 
-# --- P4 的真实滚动样本外预测（此前直接借用 P3 的 MAE，见优化意见 §4）---
 _p4_opt_hist = core.q2_weighted_basket(KL["optical"], common)
 p4_pred = {}
 for p in range(W_BASE, len(COMMON_D)):
@@ -210,10 +187,8 @@ for p in range(W_BASE, len(COMMON_D)):
 
 errs_p2 = oos_errors(p2_pred)
 errs_p3 = oos_errors(p3_pred)
-errs_p4 = oos_errors(p4_pred) if p4_pred else errs_p3
-errs_p1 = np.array([Yd[i] - Q2d[i] for i in range(len(Q2d))])
+errs_p4 = oos_errors(p4_pred) if p4_pred else errs_p3\,errs_p1 = np.array([Yd[i] - Q2d[i] for i in range(len(Q2d))])
 
-# 使用 W_BASE(60) 窗口计算集成权重 MAE，与回测逐日重拟合一致，比 40 日更稳定
 K = min(W_BASE, len(errs_p2))
 err_mae_p1 = float(np.mean(np.abs(errs_p1[-K:])))
 err_mae_p2 = float(np.mean(np.abs(errs_p2[-K:])))
@@ -222,7 +197,6 @@ err_mae_p4 = float(np.mean(np.abs(errs_p4[-K:])))
 print(f"[P4 独立误差] 近{K}日 MAE={err_mae_p4:.3f}%"
       f"（此前借用 P3 的 {err_mae_p3:.3f}%，差 {err_mae_p4-err_mae_p3:+.3f}pp）")
 
-# --- P5 的真实样本外 MAE（由 tests/backtest_p5.py 逐日重拟合 LASSO/NNLS 产出）---
 p5_mae_real, p5_mae_src, p5_provisional = None, "无", True
 try:
     _p5r = json.load(open(os.path.join(CACHE, "p5_mae.json"), encoding="utf-8"))
@@ -240,10 +214,6 @@ err_mae_nopcb = float(np.mean(np.abs(errs_p3_nopcb[-K:])))
 print(f"[PCB增量验证] 含PCB因子 MAE={err_mae_p3:.3f}% vs 不含PCB MAE={err_mae_nopcb:.3f}% "
       f"→ {'下降' if err_mae_p3 < err_mae_nopcb else '未下降'} {err_mae_nopcb-err_mae_p3:+.3f}pp")
 
-# ---- 偏差修正：改用【集成自身】的历史误差（优化意见 §2，此前主脚本仍错用 P3 误差）----
-# 鸡生蛋问题：集成权重依赖各模型 MAE，而 MAE 又要逐日回看。解法与回测一致 ——
-# 逐日用"截至前一日的 trailing MAE"定权重，重建集成的历史预测序列，再取其误差。
-# 全程只用当日之前的信息，无未来泄漏。
 _ens_hist_pred, _dlist = {}, sorted(p3_pred)
 _p5_daily = {}
 try:
@@ -280,7 +250,7 @@ if len(errs_ens) >= 10:
     err_std = float(np.std(errs_ens[-K:]))
     _bias_src = f"集成自身历史误差（{len(errs_ens)}日重建）"
 else:
-    bias = core.bias_correction(errs_p3[-K:], hl=10)   # 样本不足时降级
+    bias = core.bias_correction(errs_p3[-K:], hl=10)
     err_std = float(np.std(errs_p3[-K:]))
     _bias_src = f"P3 误差序列（集成序列仅 {len(errs_ens)} 日，不足 10 日故降级）"
 err_med = bias["applied"]
@@ -295,9 +265,6 @@ print(f"[偏差修正] med20={bias['med20']:+.2f}% med40={bias['med40']:+.2f}% "
       f"×收缩{bias['shrink']:.2f} = 实施{err_med:+.2f}%  "
       f"(分歧{bias['divergence']:.2f}pp {'稳定' if bias['stable'] else '不稳定→已收缩并下调置信度'})")
 
-# ============================================================
-# 6. 今日盘中实时行情（含分篮子降级）
-# ============================================================
 def qt_symbol(code):
     return ("sh" if code.startswith(("60", "68", "9", "000", "399")) else "sz") + code
 
@@ -332,7 +299,6 @@ def fetch_realtime(codes, retries=3):
 all_codes = BASKETS["optical"] + BASKETS["pcb"] + BASKETS["semis"] + ["000852"]
 rt = fetch_realtime(all_codes)
 
-# 分篮子可用度检查（v4：降级而非静默用错数）
 rt_degraded = {}
 for g, codes in BASKETS.items():
     have = sum(1 for c in codes if qt_symbol(c) in rt)
@@ -355,14 +321,10 @@ intr_mkt = rt[mkt_sec][2] * 100 if mkt_sec in rt else 0.0
 print(f"[盘中行情] 光通信 {intr_opt:+.2f}% | PCB {intr_pcb:+.2f}% | "
       f"半导体 {intr_sem:+.2f}% | 市场 {intr_mkt:+.2f}%")
 
-# 前十大覆盖的实时个股数（覆盖率的实时兑现度）
 top10_live = sum(1 for c, _ in TOP10 if qt_symbol(c) in rt)
 live_cov = sum(TOP10_W[c] for c, _ in TOP10 if qt_symbol(c) in rt)
 r_q2_now = sum(TOP10_W[c] * rt[qt_symbol(c)][2] for c, _ in TOP10 if qt_symbol(c) in rt) * 100.0
 
-# ============================================================
-# 7. 五模型今日预测
-# ============================================================
 P1 = r_q2_now
 P2 = r_q2_now + theta_pcb_now * (intr_pcb - r_q2_now) + theta_m_now * (intr_mkt - r_q2_now)
 P3 = float(beta_cur @ np.array([intr_opt, intr_pcb, intr_sem, intr_mkt]))
@@ -385,9 +347,6 @@ models = {"P1_Q2静态": P1, "P2_调仓替代": P2, "P3_行业因子": P3, "P4_�
 if P5 is not None:
     models["P5_个股辅助"] = P5
 
-# ============================================================
-# 8. 集成（v4：同源分组去重）
-# ============================================================
 maes = {"P1_Q2静态": err_mae_p1, "P2_调仓替代": err_mae_p2,
         "P3_行业因子": err_mae_p3, "P4_层级组合": err_mae_p4}
 provisional = set()
@@ -396,7 +355,7 @@ if P5 is not None:
         maes["P5_个股辅助"] = p5_mae_real
     else:
         maes["P5_个股辅助"] = max(err_mae_p3, P5_MAE_PROXY_FLOOR)
-        provisional.add("P5_个股辅助")     # 假 MAE 不得换取真权重 → 硬性封顶
+        provisional.add("P5_个股辅助")
 print(f"[P5 误差来源] {p5_mae_src}"
       + (f" → MAE={p5_mae_real:.3f}%" if p5_mae_real is not None else ""))
 
@@ -414,16 +373,8 @@ if ens_info["provisional_capped"]:
 P_final = sum(weights.get(k, 0.0) * models[k] for k in models)
 P_final_corr = P_final + err_med
 
-# ============================================================
-# 9. 目标日 / 基准净值 / 估算语义（v4：显式字段 + 自检）
-# ============================================================
-# 逻辑（优化意见：官方净值日期为权威交易日集合）：
-#   - 若目标日已发布官方净值(official_nav is not None)：估算的是【下一交易日】，基准取目标日净值
-#   - 若目标日未发布官方净值：估算的是【当前交易日(即最新NAV日期)】，基准取最新NAV日期净值
-#   - COMMON_D[-1] 是最新可用因子数据日期（通常等于最新NAV日期，但在休市后可能不同）
 target_date = COMMON_D[-1]
 
-# 判断是否有官方净值：last_nav.json 的 date == target_date 且 nav 字段存在
 official_nav = official_chg = official_date = None
 try:
     _ln = json.load(open(os.path.join(CACHE, "last_nav.json"), encoding="utf-8"))
@@ -438,12 +389,9 @@ except Exception:
     pass
 
 if official_nav is not None:
-    # 官方净值已发布 → 估算下一交易日
     target_date = core.next_trade_day(target_date)
-    nav_prev, nav_prev_date = navs[-1], dates[-1]  # 目标日当日净值作为基准
+    nav_prev, nav_prev_date = navs[-1], dates[-1]
 else:
-    # 官方净值未发布 → 估算当前交易日（最新 NAV 日期）
-    # COMMON_D[-1] 通常就是 dates[-1]；若因休市导致不同，以 dates[-1] 为准
     target_date = dates[-1]
     nav_prev, nav_prev_date = navs[-1], dates[-1]
 
@@ -460,9 +408,6 @@ nav_center = nav_prev * (1 + P_final_corr / 100)
 band = 1.5 * err_std
 lo_band, hi_band = P_final_corr - band, P_final_corr + band
 
-# ============================================================
-# 10. PCB 三级信号
-# ============================================================
 _infer_pcb = None
 try:
     _inf = json.load(open(os.path.join(CACHE, "infer.json"), encoding="utf-8"))
@@ -470,7 +415,6 @@ try:
 except Exception:
     pass
 
-# θ_pcb 近 10 个交易日序列（用于"连续上升"的趋势检验）
 _theta_seq = [theta_pcb_hist[d] for d in sorted(theta_pcb_hist)][-10:]
 
 pcb_level, pcb_evidence = core.pcb_signal_strength(
@@ -488,9 +432,6 @@ print("  证据: " + "  ".join(
     f"{k}={'✓' if v else '✗'}" for k, v in pcb_evidence.items()
     if k.startswith("C")) + f"  θ斜率={pcb_evidence.get('theta_slope')}")
 
-# ============================================================
-# 11. 置信度 0-100 连续分（v4）
-# ============================================================
 model_spread = max(models.values()) - min(models.values())
 _ref_key = COMMON_D[-min(20, len(COMMON_D) - 1)]
 theta_stable = abs(theta_pcb_now - theta_pcb_hist.get(_ref_key, theta_pcb_now))
@@ -498,9 +439,6 @@ conf_score, conf, conf_detail = core.confidence_score(
     mae=err_mae_p3, spread=model_spread, theta_stability=theta_stable,
     bias_divergence=bias["divergence"], data_quality=dq["score"], coverage=SUM_W)
 
-# ============================================================
-# 12. 输出
-# ============================================================
 print("\n" + "=" * 66)
 print("006010 盘中估值 v4 · 多模型组合（可信度强化版）")
 print("=" * 66)
@@ -521,7 +459,6 @@ print(f"主要风险: ①光通信~PCB相关r={_corr[0,1]:.2f}调仓比例识别
       f"②未披露持仓{(1-SUM_W)*100:.1f}%不可观测 ③盘中行情与基金估值时点存在时间差")
 print("=" * 66)
 
-# --- 主口径决策结论（由 tests/backtest_v3.py --decide 产出，此处引用而非重算）---
 _CALIBER = None
 try:
     _dec = json.load(open(os.path.join(CACHE, "decide_report.json"), encoding="utf-8"))
@@ -541,7 +478,6 @@ result = {
     "version": "v4",
     "cur_date": target_date,
     "target_date": target_date,
-    # --- v4 显式估算语义（页面/推送不再自行推断） ---
     "estimation_mode": est["mode"],
     "estimation_label": est["label"],
     "market_session": est["session"],
@@ -551,12 +487,10 @@ result = {
     "nav_prev_date": nav_prev_date,
     "date_check_ok": ok_date,
     "date_problems": date_problems,
-    # --- 模型 ---
     "models": {k: round(float(v), 2) for k, v in models.items()},
     "model_weights": {k: round(float(w), 3) for k, w in weights.items()},
     "model_groups": ens_info["groups"],
     "group_weights": ens_info["group_weights"],
-    # --- 集成审计（v4：让"为什么是这个权重"可被外部复核）---
     "ensemble_audit": {
         "gate": core.MAE_GATE,
         "mae_power": core.MAE_POWER,
@@ -573,14 +507,13 @@ result = {
         "p5_is_real_oos": (not p5_provisional),
         "bias_source": "集成自身历史误差（非借用 P3）",
     },
-    # --- 数据卫生（收盘价/盘中价隔离留痕）---
     "data_hygiene": {
         "has_intraday_snapshot": bool(INTRA),
         "intraday_date": INTRA.get("date") if INTRA else None,
         "intraday_settled": INTRA.get("settled") if INTRA else None,
         "unsettled_dates": sorted(_unsettled),
         "stripped_rows": _n_strip,
-        "note": ("klines.json 只含正式收盘价；盘中实时价存 intraday.json，"
+        "note": ("klines.json 只含正式收盘价；盘中实时价存 intraday.json,"
                  "不参与滚动回归/误差统计/回测"),
     },
     "caliber_decision": _CALIBER,
@@ -591,7 +524,6 @@ result = {
     "nav_center": round(float(nav_center), 4),
     "band_pct": [round(float(lo_band), 2), round(float(hi_band), 2)],
     "model_spread_pct": round(float(model_spread), 2),
-    # --- 暴露与信号 ---
     "theta_pcb": round(float(theta_pcb_now), 4),
     "theta_mkt": round(float(theta_m_now), 4),
     "pcb_signal": pcb_level,
@@ -602,7 +534,6 @@ result = {
     "pcb_sensitivity": {str(w): round(float(sens[w][1]), 4) for w in sens},
     "exposure": {FACTOR_LABELS[i]: round(float(beta_cur[i]), 4) for i in range(4)},
     "residual": round(float(1 - beta_cur.sum()), 4),
-    # --- 可信度 ---
     "confidence": conf,
     "confidence_score": conf_score,
     "confidence_detail": conf_detail,
@@ -610,12 +541,10 @@ result = {
             "P3": round(err_mae_p3, 2), "P4": round(err_mae_p4, 2),
             "P5": (round(p5_mae_real, 2) if p5_mae_real is not None else None)},
     "oos_err_std_pct": round(err_std, 2),
-    # --- 覆盖率（核心指标） ---
     "top10_coverage": round(SUM_W, 4),
     "top10_coverage_live": round(live_cov, 4),
     "top10_live_count": top10_live,
     "undisclosed_ratio": round(1 - SUM_W, 4),
-    # --- 数据质量 ---
     "data_quality": {"ok": dq["ok"], "score": dq["score"],
                      "warnings": dq["warnings"], "errors": dq["errors"],
                      "realtime_degraded": rt_degraded,

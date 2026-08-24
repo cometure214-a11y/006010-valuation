@@ -386,6 +386,42 @@ def build_sector_bars(intraday):
     return rows
 
 
+def build_error_spark(records):
+    """近20日估值误差折线（围绕0线），返回 SVG 字符串。records: [{date, err, ...}]"""
+    recs = records[-20:]
+    if len(recs) < 3:
+        return ''
+    vals = [float(r.get("err", 0)) for r in recs]
+    vmin, vmax = min(vals + [0]), max(vals + [0])
+    vrange = vmax - vmin or 1
+    W, H = 440, 44
+    pad = 6
+    innerW, innerH = W - pad * 2, H - pad * 2
+    n = len(vals)
+    step = innerW / (n - 1) if n > 1 else 0
+    coords = []
+    for i, v in enumerate(vals):
+        x = pad + i * step
+        y = pad + (1 - (v - vmin) / vrange) * innerH
+        coords.append((x, y))
+    d = 'M' + ' L'.join(f'{x:.1f},{y:.1f}' for x, y in coords)
+    y0 = pad + (1 - (0 - vmin) / vrange) * innerH
+    zero = (f'<line x1="{pad}" y1="{y0:.1f}" x2="{W - pad}" y2="{y0:.1f}" '
+            f'stroke="rgba(255,255,255,.14)" stroke-width="0.5" stroke-dasharray="3 3"/>')
+    mae = sum(abs(v) for v in vals) / n
+    color = '#30a46c' if mae < 0.5 else ('#dcdcaa' if mae < 1.0 else '#f04e3c')
+    first_d = recs[0].get('date', '')[-5:]
+    last_d = recs[-1].get('date', '')[-5:]
+    svg = f'''<div class="spark">
+<svg viewBox="0 0 {W} {H}" preserveAspectRatio="none">
+{zero}
+<path d="{d}" fill="none" stroke="{color}" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>
+<div class="lbl-row"><span>{first_d} ~ {last_d}</span><span>近{n}日 MAE {mae:.2f}%</span></div>
+</div>'''
+    return svg
+
+
 def build_html(d):
     top10_js = ",\n".join(f'  {{s:"{s}", w:{w}}}' for s, w in TOP10)
     # 注入模型参数（θ_pcb / θ_mkt / PCB 篮子）供前端三口径实时估算
@@ -548,6 +584,19 @@ def build_html(d):
   <div class="row"><span class="k">暴露：PCB</span><span class="v2">{d.get('exposure',{}).get('PCB',0)*100:.1f}%</span></div>
   <div class="tip">θ=模型估计从 Q2 组合切到 PCB 的有效比例，非真实持仓；光通信与 PCB 相关性 r≈0.71，存在识别误差。</div>
 </div></details>"""
+
+        # ── 误差走势卡（进化可视化，数据来自 daily_errors.py 的 error_history.json）──
+        error_hist = load_json("error_history.json")
+        _recs = (error_hist or {}).get("records") or []
+        if len(_recs) >= 3:
+            details += f"""<details class="card" open><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail">
+{build_error_spark(_recs)}
+<div class="tip">误差 = 官方涨跌 − 模型估算（pp），越贴近 0 越准。累计 {len(_recs)} 日 · 全期 MAE <b>{sum(abs(float(r.get('err',0))) for r in _recs)/len(_recs):.2f}%</b> · 最近一日 {float(_recs[-1].get('err',0)):+.2f}pp。<br>误差库由每日守望自动积累，模型据此滚动自进化。</div>
+</div></details>"""
+        elif _recs:
+            details += '<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail"><div class="tip">误差样本不足（≥3日生效），净值公布后自动积累。</div></div></details>'
+        else:
+            details += '<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail"><div class="tip">暂无误差数据（今晚净值公布后自动积累）。</div></div></details>'
     else:
         metrics = '<div class="metrics"><div class="m"><div class="v">--</div><div class="l">合理区间</div></div><div class="m"><div class="v">--</div><div class="l">置信度</div></div><div class="m"><div class="v">--</div><div class="l">PCB调仓</div></div></div>'
         details = '<div class="card"><div class="loading">暂无数据，请先运行模型</div></div>'

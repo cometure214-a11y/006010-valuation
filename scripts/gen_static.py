@@ -183,16 +183,38 @@ const THETA_PCB = __THETA_PCB__;      // 光通信→PCB 有效替代比例
 const THETA_MKT = __THETA_MKT__;
 const PCB_CODES = __PCB_CODES__;      // PCB 篮子（模型候选池）
 
+const EM_PREFIX = {sh:'1', sz:'0'};
+let emFired = false;
 function loadQuotes(){
   const s = TOP10.map(t=>t.s).join(',') + ',' + PCB_CODES.join(',') + ',sz000852';
   const sc = document.createElement('script');
   sc.src = 'https://qt.gtimg.cn/q=' + s;
-  sc.onload = calcRealtime;
-  sc.onerror = function(){
-    document.getElementById('rt_loading').innerHTML =
-      '<div class="loading">实时行情获取失败（非交易时段或网络限制）</div>';
-  };
+  sc.onload = function(){ if(!calcRealtime()) loadEM(); };
+  sc.onerror = function(){ loadEM(); };
   document.body.appendChild(sc);
+}
+function loadEM(){
+  if(emFired) return;
+  emFired = true;
+  const all = TOP10.map(t=>t.s).concat(PCB_CODES, ['sz000852']);
+  let done = 0;
+  all.forEach(code=>{
+    const m = code.match(/^(sh|sz)(\\d+)$/);
+    const secid = EM_PREFIX[m[1]] + '.' + m[2];
+    const cb = 'em_cb_' + m[2];
+    window[cb] = function(d){
+      const p = d && d.data;
+      if(p && p.f170 != null){
+        const chg = p.f170 || 0;
+        window['v_'+code] = ['', p.f58 || code, code, (100+chg).toFixed(2), '100'].join('~');
+      }
+      if(++done >= all.length) calcRealtime();
+    };
+    const sc = document.createElement('script');
+    sc.src = 'https://push2.eastmoney.com/api/qt/stock/get?secid=' + secid +
+             '&fields=f58,f170&fltt=2&invt=2&cb=' + cb;
+    document.body.appendChild(sc);
+  });
 }
 function fmt(v,d){return (v>0?'+':'') + v.toFixed(d) + '%';}
 function cl(v){return v>0.005?'up':(v<-0.005?'down':'flat');}
@@ -222,7 +244,11 @@ function calcRealtime(){
     if(!prev) return;
     pcbVals.push((cur-prev)/prev*100);
   });
-  if(n<5){document.getElementById('rt_loading').innerHTML='<div class="loading">行情解析异常，请稍后刷新</div>';return;}
+  if(n<5){
+    if(!emFired){ return false; }
+    document.getElementById('rt_loading').innerHTML='<div class="loading">行情解析异常，请稍后刷新</div>';
+    return true;
+  }
   // ── 三口径实时估算 ──
   const conservative = num;                    // ① 保守：Q2权重，剩余仓位≈现金/未知
   const pcbMean = pcbVals.length ? pcbVals.reduce((a,b)=>a+b,0)/pcbVals.length : 0;
@@ -246,6 +272,7 @@ function calcRealtime(){
   document.getElementById('rt_band').innerHTML =
     '三口径区间 <b>' + fmt(lo,2) + ' ~ ' + fmt(hi,2) + '</b>（跨度 ' + fmt(spread,2) + '）';
   document.getElementById('rt_list').innerHTML = rows;
+  return true;
 }
 function setVal(id, v, boxId){
   const el = document.getElementById(id);

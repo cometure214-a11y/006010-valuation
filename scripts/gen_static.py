@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-gen_static.py —— 云端版：渲染手机端估值页（信息分级版 v4）
-v4 美化点：
+gen_static.py —— 云端版：渲染手机端估值页（v2 改版）
+
+v2 改版（2026-08-24，基于多模态 AI 评审意见）：
+  [1] 首屏重构：只留 基金名+时间 / 大数字涨跌+官方净值+置信度大白话 / 大幅走势图
+  [2] 配色统一：红涨绿跌（.up 红 / .down 绿），走势图折线随涨跌变色，进度条同色系渐变
+  [3] 桌面响应式：>=1024px 左右分栏（左65% 核心信息 / 右35% 辅助信息）
+  [4] 普通/高级模式：默认普通（只显示结论），右上角开关切高级（PCB/θ/MAE/模型明细/误差）
+  [5] 文案精简：删重复日期/净值，「较上一交易日」改「基准净值」；底部开发说明默认隐藏
+
+v4 基础功能（保留）：
   - Hero 底部内嵌近 10 日 NAV 迷你走势 sparkline（含今日估算）
-  - 合理区间改为可视进度条（含当前估值标记）
-  - 实时口径卡重排：两数并排 + 归一化 tooltip + 行业热力条
-  - 主数字微光晕效果，模型版本徽章
-  - 底部精简为一行
-  - 置信度加入 MAE 数值徽章
+  - 合理区间进度条 + 实时行情三口径 + 行业热力条 + 个股列表
+  - 误差走势卡（error_history.json）
 """
 import json, os, time, math
 
@@ -50,13 +55,13 @@ body{background:#0b0f15;color:#e6e9ef;
 
 /* ─── Hero 常驻层 ─── */
 .hero{position:relative;background:linear-gradient(165deg,#111820,#0d1319 70%);
-      border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:24px 22px 18px;text-align:center;
+      border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:22px 20px 16px;text-align:center;
       margin-bottom:10px;overflow:hidden}
 .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;
               background:radial-gradient(circle,rgba(240,78,60,.10) 0%,transparent 70%);pointer-events:none}
 .hero::after{content:'';position:absolute;bottom:-30px;left:-30px;width:140px;height:140px;
              background:radial-gradient(circle,rgba(78,201,176,.07) 0%,transparent 70%);pointer-events:none}
-.hero .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.hero .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .hero .lbl{font-size:11.5px;color:#8892a3;letter-spacing:1.5px}
 .badge{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(78,201,176,.12);
        color:#4ec9b0;font-weight:700;letter-spacing:.5px}
@@ -68,23 +73,28 @@ body{background:#0b0f15;color:#e6e9ef;
 .hero .sub b{font-size:22px;font-weight:800;color:#e6e9ef}
 .hero .ref{font-size:11.5px;color:#6b7280;margin-top:8px}
 .hero .ref b{color:#b8c0cc}
+/* 置信度大白话（v2 新增） */
+.conf-plain{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:20px;
+            background:rgba(48,164,108,.12);color:#4ec9b0;font-size:12px;font-weight:600}
+.conf-plain.low{background:rgba(220,202,106,.12);color:#dcdcaa}
 
-/* sparkline */
+/* sparkline（v2 加大：44 -> 110px，含更多刻度） */
 .spark{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.05)}
-.spark svg{display:block;margin:0 auto;width:100%;height:44px}
-.spark .lbl-row{display:flex;justify-content:space-between;font-size:10px;color:#5c6470;margin-top:2px}
+.spark svg{display:block;margin:0 auto;width:100%;height:110px}
+.spark .lbl-row{display:flex;justify-content:space-between;font-size:10px;color:#5c6470;margin-top:4px}
 
-/* ─── 关注层 ─── */
-.metrics{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-bottom:10px}
+/* ─── 关注层（v2 精简为 2 卡：区间 + 模式） ─── */
+.metrics{display:grid;grid-template-columns:1.6fr 1fr;gap:8px;margin-bottom:10px}
 .m{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;
    padding:12px 8px;text-align:center;position:relative}
 .m .v{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;margin-bottom:4px}
 .m .l{font-size:10px;color:#8892a3}
 .m .sub-v{font-size:10px;color:#5c6470;margin-top:2px}
 .m-range .bar{position:relative;height:8px;border-radius:4px;
-              background:linear-gradient(90deg,#1a2634,#2a3a4a);margin:8px 6px 4px;overflow:hidden}
+              background:rgba(255,255,255,.07);margin:8px 6px 4px;overflow:hidden}
 .m-range .bar .fill{position:absolute;left:0;top:0;height:100%;border-radius:4px;
-                    background:linear-gradient(90deg,rgba(48,164,108,.4),rgba(240,78,60,.4))}
+                    background:linear-gradient(90deg,rgba(48,164,108,.45),rgba(48,164,108,.15))}
+.m-range .bar .fill.pos{background:linear-gradient(90deg,rgba(240,78,60,.15),rgba(240,78,60,.45))}
 .m-range .bar .marker{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;
                       background:#e6e9ef;transform:translate(-50%,-50%);
                       box-shadow:0 0 0 3px rgba(230,233,239,.2)}
@@ -93,6 +103,14 @@ body{background:#0b0f15;color:#e6e9ef;
 .pill.mid{background:rgba(220,202,106,.14);color:#dcdcaa}
 .pill.weak{background:rgba(139,148,163,.14);color:#a3adbd}
 .pill.high{background:rgba(48,164,108,.14);color:#30a46c}
+
+/* ─── 高级模式（v2 新增：默认隐藏专业指标，开关切换） ─── */
+.adv{display:none}
+body.adv-on .adv{display:block}
+body.adv-on .adv-inline{display:inline-block}
+.adv-toggle{position:relative;font-size:10px;color:#6b7280;background:none;border:1px solid rgba(255,255,255,.12);
+            border-radius:20px;padding:3px 10px;cursor:pointer;margin-left:8px;vertical-align:middle}
+body.adv-on .adv-toggle{color:#4ec9b0;border-color:rgba(78,201,176,.4)}
 
 /* ─── 详情层 ─── */
 details.card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);
@@ -139,7 +157,7 @@ details[open] summary .arr{transform:rotate(90deg)}
 .item .code{color:#8892a3;font-size:10.5px}.item .w{color:#5c6470;font-size:10.5px;margin-left:6px}
 .item .ret{font-weight:700;font-variant-numeric:tabular-nums;font-size:12px}
 
-/* 底部 */
+/* 底部（v2：开发说明默认隐藏，仅高级模式显示） */
 .foot{display:flex;flex-direction:column;gap:6px;margin-top:10px}
 .btn{display:block;width:100%;padding:12px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;
      background:#1c2530;color:#c6ccd6;border:1px solid rgba(255,255,255,.07)}
@@ -172,6 +190,17 @@ details[open] summary .arr{transform:rotate(90deg)}
 .drop code{color:#a3adbd;font-size:10px}
 .wbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);margin-top:5px}
 .wbar i{display:block;height:100%}
+
+/* ─── v2 桌面响应式：>=1024px 左右分栏 ─── */
+@media (min-width:1024px){
+  .wrap{max-width:1120px;padding:18px 24px 32px}
+  .grid-main{display:grid;grid-template-columns:minmax(0,65%) minmax(0,35%);gap:14px;align-items:start}
+  .col-side{display:grid;grid-template-columns:1fr;gap:8px}
+  .hero{padding:26px 28px 18px}
+  .hero .main{font-size:92px}
+  .spark svg{height:130px}
+  .metrics{grid-template-columns:1.6fr 1fr}
+}
 """
 
 JS = """
@@ -199,7 +228,7 @@ function loadEM(){
   const all = TOP10.map(t=>t.s).concat(PCB_CODES, ['sz000852']);
   let done = 0;
   all.forEach(code=>{
-    const m = code.match(/^(sh|sz)(\\d+)$/);
+    const m = code.match(/^(sh|sz)(\d+)$/);
     const secid = EM_PREFIX[m[1]] + '.' + m[2];
     const cb = 'em_cb_' + m[2];
     window[cb] = function(d){
@@ -218,6 +247,21 @@ function loadEM(){
 }
 function fmt(v,d){return (v>0?'+':'') + v.toFixed(d) + '%';}
 function cl(v){return v>0.005?'up':(v<-0.005?'down':'flat');}
+
+// ── v2 高级模式开关（localStorage 记忆）──
+function initAdvMode(){
+  const on = localStorage.getItem('006010_adv') === '1';
+  document.body.classList.toggle('adv-on', on);
+  const b = document.getElementById('adv_btn');
+  if(b) b.textContent = on ? '高级模式 ●' : '高级模式';
+}
+function toggleAdv(){
+  const on = !document.body.classList.contains('adv-on');
+  document.body.classList.toggle('adv-on', on);
+  localStorage.setItem('006010_adv', on ? '1' : '0');
+  const b = document.getElementById('adv_btn');
+  if(b) b.textContent = on ? '高级模式 ●' : '高级模式';
+}
 
 function calcRealtime(){
   let num=0, wsum=0, n=0, rows='';
@@ -287,6 +331,7 @@ function mktPct(){
   const cur = parseFloat(p[3]), prev = parseFloat(p[4]);
   return prev ? (cur-prev)/prev*100 : 0;
 }
+initAdvMode();
 loadQuotes();
 setInterval(loadQuotes, 60000);
 """
@@ -295,38 +340,35 @@ def build_sparkline(navs_dates, est_nav=None):
     """Build inline SVG sparkline from NAV history + optional estimated point."""
     if len(navs_dates) < 3:
         return ''
-    # Take last 10 real points + 1 estimated
     pts = navs_dates[-10:]
     if est_nav is not None:
         pts.append(est_nav)
     vals = [p[1] for p in pts]
     vmin, vmax = min(vals), max(vals)
     vrange = vmax - vmin or 1
-    W, H = 440, 44
-    pad = 6
+    W, H = 440, 110
+    pad = 8
     innerW = W - pad*2
     innerH = H - pad*2
     n = len(vals)
     step = innerW / (n-1) if n > 1 else 0
-    # Normalize: higher NAV -> lower Y
     coords = []
     for i, v in enumerate(vals):
         x = pad + i * step
         y = pad + (1 - (v - vmin)/vrange) * innerH
         coords.append((x, y))
-    # Path
     d = 'M' + ' L'.join(f'{x:.1f},{y:.1f}' for x,y in coords)
-    # Area
     area_d = d + f' L{coords[-1][0]:.1f},{H-pad} L{coords[0][0]:.1f},{H-pad} Z'
-    # Color based on trend
     up = vals[-1] >= vals[0]
-    color = '#30a46c' if up else '#f04e3c'
-    glow = '#48c9b0' if up else '#f04e3c'
-    # Estimate dot (last point)
+    color = '#f04e3c' if up else '#30a46c'
+    glow = '#f04e3c' if up else '#30a46c'
     lx, ly = coords[-1]
-    last_date = pts[-1][0].split('-')[1]+'-'+pts[-1][0].split('-')[2] if '-' in pts[-1][0] else ''
-    first_date = pts[0][0].split('-')[1]+'-'+pts[0][0].split('-')[2] if '-' in pts[0][0] else ''
-    date_labels = f'<span>{first_date}</span><span>{last_date}</span>'
+    def md(s):
+        return s.split('-')[1]+'-'+s.split('-')[2] if '-' in s else ''
+    first_date = md(pts[0][0])
+    mid_date = md(pts[len(pts)//2][0])
+    last_date = md(pts[-1][0])
+    date_labels = f'<span>{first_date}</span><span>{mid_date}</span><span>{last_date}</span>'
     svg = f'''
 <div class="spark">
 <svg viewBox="0 0 {W} {H}" preserveAspectRatio="none">
@@ -337,30 +379,29 @@ def build_sparkline(navs_dates, est_nav=None):
     </linearGradient>
   </defs>
   <path d="{area_d}" fill="url(#spArea)"/>
-  <path d="{d}" fill="none" stroke="{color}" stroke-width="1.5" stroke-linejoin="round"/>
-  <circle cx="{lx:.1f}" cy="{ly:.1f}" r="3" fill="{glow}" stroke="#0b0f15" stroke-width="1.5"/>
+  <path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="{lx:.1f}" cy="{ly:.1f}" r="3.5" fill="{glow}" stroke="#0b0f15" stroke-width="1.5"/>
 </svg>
 <div class="lbl-row">{date_labels}</div>
 </div>'''
     return svg
 
-
 def build_range_bar(lo, hi, cur):
-    """Build horizontal range bar with marker."""
+    """Build horizontal range bar with marker（v2：同色系深浅渐变，按当前方向）. """
     lo_f, hi_f, cur_f = float(lo), float(hi), float(cur)
     span = hi_f - lo_f or 0.01
     pos = max(0, min(1, (cur_f - lo_f)/span)) * 100
     fill_pct = max(pos, 8)
+    fill_cls = 'pos' if cur_f >= 0 else ''
     svg = f'''
 <div class="bar">
-  <div class="fill" style="width:{fill_pct:.1f}%"></div>
+  <div class="fill {fill_cls}" style="width:{fill_pct:.1f}%"></div>
   <div class="marker" style="left:{pos:.1f}%"></div>
 </div>
 <div style="display:flex;justify-content:space-between;font-size:10px;color:#5c6470;margin-top:2px;padding:0 4px">
   <span>{lo_f:+.2f}%</span><span>{hi_f:+.2f}%</span>
 </div>'''
     return svg
-
 
 def build_sector_bars(intraday):
     """Build sector heat bars."""
@@ -385,7 +426,6 @@ def build_sector_bars(intraday):
 </div>'''
     return rows
 
-
 def build_error_spark(records):
     """近20日估值误差折线（围绕0线），返回 SVG 字符串。records: [{date, err, ...}]"""
     recs = records[-20:]
@@ -394,8 +434,8 @@ def build_error_spark(records):
     vals = [float(r.get("err", 0)) for r in recs]
     vmin, vmax = min(vals + [0]), max(vals + [0])
     vrange = vmax - vmin or 1
-    W, H = 440, 44
-    pad = 6
+    W, H = 440, 90
+    pad = 8
     innerW, innerH = W - pad * 2, H - pad * 2
     n = len(vals)
     step = innerW / (n - 1) if n > 1 else 0
@@ -415,16 +455,14 @@ def build_error_spark(records):
     svg = f'''<div class="spark">
 <svg viewBox="0 0 {W} {H}" preserveAspectRatio="none">
 {zero}
-<path d="{d}" fill="none" stroke="{color}" stroke-width="1.5" stroke-linejoin="round"/>
+<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
 </svg>
 <div class="lbl-row"><span>{first_d} ~ {last_d}</span><span>近{n}日 MAE {mae:.2f}%</span></div>
 </div>'''
     return svg
 
-
 def build_html(d):
     top10_js = ",\n".join(f'  {{s:"{s}", w:{w}}}' for s, w in TOP10)
-    # 注入模型参数（θ_pcb / θ_mkt / PCB 篮子）供前端三口径实时估算
     theta_pcb = (d or {}).get("theta_pcb", 0) or 0
     theta_mkt = (d or {}).get("theta_mkt", 0) or 0
     pcb_codes = "[" + ",".join(f'"{c}"' for c in PCB_BASKET) + "]"
@@ -436,7 +474,6 @@ def build_html(d):
     def cl(v):
         return "up" if v > 0.0001 else ("down" if v < -0.0001 else "flat")
 
-    # Load sparkline data
     spark_html = ''
     spark_center = None
     nav_data = load_json("nav.json")
@@ -457,6 +494,8 @@ def build_html(d):
     metrics = ""
     details = ""
     spark_in_hero = ''
+    conf_plain = ''
+    mae_p3_txt = ''
 
     if d:
         center = d.get("P_final_corr", d.get("L3_center_pct", 0))
@@ -475,39 +514,45 @@ def build_html(d):
         mae_p1 = mae.get("P1", 0)
         mae_p2 = mae.get("P2", 0)
         mae_p3 = mae.get("P3", 0)
-        mae_txt = f"P1 {mae_p1:.2f} | P2 {mae_p2:.2f} | P3 {mae_p3:.2f}"
+        mae_p4 = mae.get("P4", mae_p3)
+        mae_txt = f"P1 {mae_p1:.2f} | P2 {mae_p2:.2f} | P3 {mae_p3:.2f} | P4 {mae_p4:.2f}"
+        mae_p3_txt = f"{mae_p3:.2f}%"
 
         spark_in_hero = spark_html
         import datetime as _dt
         cur = d.get("cur_date", "")
         target = d.get("target_date", cur)
         nav_prev_date = d.get("nav_prev_date", cur)
-        # 官方净值是否已公布（由模型读取 last_nav.json 填入）
         official_nav = d.get("official_nav")
         official_chg = d.get("official_chg")
         official_date = d.get("official_date")
 
+        conf_lvl = conf_pill
+        if conf_lvl == "high":
+            conf_plain_html = f'<span class="conf-plain">高准确度 · 历史误差约 ±{mae_p3:.1f}%</span>'
+        elif conf_lvl == "mid":
+            conf_plain_html = '<span class="conf-plain" style="background:rgba(220,202,106,.12);color:#dcdcaa">中等准确度 · 参考谨慎</span>'
+        else:
+            conf_plain_html = '<span class="conf-plain low">低准确度 · 参考需谨慎</span>'
+
         if official_nav is not None and official_chg is not None:
-            # ── 官方已公布：主数字=官方实际，副行=模型对比 ──
             hero_main = official_chg
             hero_sub = f"官方净值 <b>{official_nav}</b>"
-            hero_ref = f"较上一交易日 <b>{nav_prev}</b>（{nav_prev_date}）· 模型估算 {center:+.2f}%"
+            hero_ref = f"基准净值 {nav_prev}（{nav_prev_date}）· 模型估算 {center:+.2f}%"
             diff = official_chg - center
             lbl = f"今日官方净值（{official_date}）"
-            badge = "官方 + 模型"
-            diff_txt = f"（模型差 {diff:+.2f}pp）" if abs(diff) > 0.005 else "（模型一致）"
-            hero_ref += f" {diff_txt}"
+            badge = "官方已公布"
+            if abs(diff) > 0.005:
+                hero_ref += f" · 模型差 {diff:+.2f}pp"
+            else:
+                hero_ref += " · 模型一致"
         else:
-            # ── 官方未公布（盘中）：主数字=模型估算 ──
             hero_main = center
             hero_sub = f"预计净值 <b>{nav_center}</b>"
-            hero_ref = f"较上一交易日 <b>{nav_prev}</b>（{nav_prev_date}）"
+            hero_ref = f"基准净值 {nav_prev}（{nav_prev_date}）"
             today = _dt.date.today().isoformat()
-            if cur >= today:
-                lbl = f"今日盘中估算（{cur}）"
-            else:
-                lbl = f"盘中估算（{cur}）"
-            badge = "模型 v3"
+            lbl = f"今日盘中估算（{cur}）" if cur >= today else f"盘中估算（{cur}）"
+            badge = "模型估算"
 
         range_bar = build_range_bar(band[0], band[1], float(hero_main))
         intraday = d.get("intraday", {})
@@ -522,6 +567,7 @@ def build_html(d):
   <div class="main {cl(float(hero_main))}">{hero_main:+.2f}%</div>
   <div class="sub">{hero_sub}</div>
   <div class="ref">{hero_ref}</div>
+  {conf_plain_html}
   {spark_in_hero}
 </div>"""
 
@@ -529,7 +575,7 @@ def build_html(d):
 <div class="metrics">
   <div class="m m-range">
     <div class="v">{band[0]:+.2f}% ~ {band[1]:+.2f}%</div>
-    <div class="l">模型合理区间（{center:+.2f}%）</div>
+    <div class="l">合理区间（{center:+.2f}%）</div>
     {range_bar}
   </div>
   <div class="m">
@@ -537,20 +583,16 @@ def build_html(d):
     <div class="l">置信度</div>
     <div class="sub-v">MAE {mae_p3:.2f}%</div>
   </div>
-  <div class="m">
-    <div class="v"><span class="pill {pill}">{pcb_sig}</span></div>
-    <div class="l">PCB 调仓</div>
-    <div class="sub-v">θ {d.get('theta_pcb',0)*100:.1f}%</div>
-  </div>
 </div>"""
 
         details = f"""
-<details class="card" id="rt_box"><summary>实时行情快照（三口径） <span class="arr">›</span></summary>
+<div class="col-main">
+<details class="card" id="rt_box" open><summary>实时行情快照（三口径） <span class="arr">›</span></summary>
 <div class="detail">
 <div class="rt-hero">
   <div class="rt-box" id="rt_con_box"><div class="rt-lbl">保守口径</div><div class="rt-val" id="rt_con">--</div><div class="rt-sub">剩余仓位≈现金</div></div>
-  <div class="rt-box" id="rt_adj_box"><div class="rt-lbl">调仓修正 ★</div><div class="rt-val" id="rt_adj">--</div><div class="rt-sub">θ_pcb={theta_pcb*100:.1f}%</div></div>
-  <div class="rt-box" id="rt_norm_box"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div><div class="rt-sub">前十大=全仓</div></div>
+  <div class="rt-box rt-main" id="rt_adj_box"><div class="rt-lbl">调仓修正 ★</div><div class="rt-val" id="rt_adj">--</div><div class="rt-sub">θ_pcb={theta_pcb*100:.1f}%</div></div>
+  <div class="rt-box norm" id="rt_norm_box"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div><div class="rt-sub">前十大=全仓</div></div>
 </div>
 <div class="rt-tip">
 <b>保守口径</b>=Q2前十大加权，剩余~15%仓位按现金/未知计（下限）。<br>
@@ -563,14 +605,15 @@ def build_html(d):
 </div></details>
 <div class="card" id="rt_loading"><div class="loading">正在获取实时行情…</div></div>
 
-<details class="card"><summary>官方 vs 模型 <span class="arr">›</span></summary><div class="detail">
+<details class="card" open><summary>官方 vs 模型 <span class="arr">›</span></summary><div class="detail">
   <div class="row"><span class="k">官方净值（{official_date or '未公布'}）</span><span class="v2">{official_nav if official_nav is not None else '--'} {f'({official_chg:+.2f}%)' if official_chg is not None else ''}</span></div>
   <div class="row"><span class="k">模型估算（{target}）</span><span class="v2">{center:+.2f}% → 预计 {nav_center}</span></div>
-  <div class="row"><span class="k">估算基准净值</span><span class="v2">{nav_prev}（{nav_prev_date}）</span></div>
-  <div class="row"><span class="k">模型偏差</span><span class="v2">{d.get('bias_correction',0):+.2f}%</span></div>
+  <div class="row"><span class="k">基准净值</span><span class="v2">{nav_prev}（{nav_prev_date}）</span></div>
   <div class="row"><span class="k">合理区间</span><span class="v2">{band[0]:+.2f}% ~ {band[1]:+.2f}%</span></div>
 </div></details>
+</div>
 
+<div class="col-side adv">
 <details class="card"><summary>各模型预测 <span class="arr">›</span></summary><div class="detail">
   <div class="row"><span class="k">模型中心（误差加权）</span><span class="v2">{d.get('P_final',0):+.2f}%</span></div>
   <div class="row"><span class="k">历史偏差修正</span><span class="v2">{d.get('bias_correction',0):+.2f}%</span></div>
@@ -583,22 +626,34 @@ def build_html(d):
   <div class="row"><span class="k">暴露：光通信</span><span class="v2">{d.get('exposure',{}).get('光通信',0)*100:.1f}%</span></div>
   <div class="row"><span class="k">暴露：PCB</span><span class="v2">{d.get('exposure',{}).get('PCB',0)*100:.1f}%</span></div>
   <div class="tip">θ=模型估计从 Q2 组合切到 PCB 的有效比例，非真实持仓；光通信与 PCB 相关性 r≈0.71，存在识别误差。</div>
-</div></details>"""
+</div></details>
+"""
 
-        # ── 误差走势卡（进化可视化，数据来自 daily_errors.py 的 error_history.json）──
+        wts = d.get("model_weights", {})
+        top_model = max(wts, key=wts.get) if wts else None
+        top_w = wts.get(top_model, 0) if top_model else 0
+        if top_model and top_w > 0.7:
+            warn_banner = f"""
+<div class="banner warn"><span class="ico">!</span>
+<span><b>单模型独大</b>：{top_model} 权重 {top_w*100:.0f}%，其他模型被淘汰（MAE 超闸门 {d.get('ensemble_audit',{}).get('gate',1.0)} 倍）。
+<button class="adv-toggle" onclick="toggleAdv()">查看高级模式</button></span></div>"""
+            details = warn_banner + details
+
         error_hist = load_json("error_history.json")
         _recs = (error_hist or {}).get("records") or []
+        err_card = ''
         if len(_recs) >= 3:
-            details += f"""<details class="card" open><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail">
+            err_card = f"""<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail">
 {build_error_spark(_recs)}
 <div class="tip">误差 = 官方涨跌 − 模型估算（pp），越贴近 0 越准。累计 {len(_recs)} 日 · 全期 MAE <b>{sum(abs(float(r.get('err',0))) for r in _recs)/len(_recs):.2f}%</b> · 最近一日 {float(_recs[-1].get('err',0)):+.2f}pp。<br>误差库由每日守望自动积累，模型据此滚动自进化。</div>
 </div></details>"""
         elif _recs:
-            details += '<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail"><div class="tip">误差样本不足（≥3日生效），净值公布后自动积累。</div></div></details>'
+            err_card = '<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail"><div class="tip">误差样本不足（≥3日生效），净值公布后自动积累。</div></div></details>'
         else:
-            details += '<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail"><div class="tip">暂无误差数据（今晚净值公布后自动积累）。</div></div></details>'
+            err_card = '<details class="card"><summary>估值误差走势 <span class="arr">›</span></summary><div class="detail"><div class="tip">暂无误差数据（今晚净值公布后自动积累）。</div></div></details>'
+        details += err_card + '</div>'
     else:
-        metrics = '<div class="metrics"><div class="m"><div class="v">--</div><div class="l">合理区间</div></div><div class="m"><div class="v">--</div><div class="l">置信度</div></div><div class="m"><div class="v">--</div><div class="l">PCB调仓</div></div></div>'
+        metrics = '<div class="metrics"><div class="m"><div class="v">--</div><div class="l">合理区间</div></div><div class="m"><div class="v">--</div><div class="l">置信度</div></div></div>'
         details = '<div class="card"><div class="loading">暂无数据，请先运行模型</div></div>'
 
     return f"""<!DOCTYPE html>
@@ -610,17 +665,20 @@ def build_html(d):
 
 <div class="hd">
   <div class="fund">006010 国融融银混合C<small>盘中估值 · 打开即刷新</small></div>
-  <div class="time"><span class="live"></span><span id="now">--</span><br>上次模型 {d.get('snapshot_time','--') if d else '--'}</div>
+  <div class="time"><span class="live"></span><span id="now">--</span><br>上次模型 {d.get('snapshot_time','--') if d else '--'}
+  <button class="adv-toggle" id="adv_btn" onclick="toggleAdv()">高级模式</button></div>
 </div>
 
+<div class="grid-main">
 {hero}
 {metrics}
 
 {details}
+</div>
 
 <div class="foot">
 <button class="btn" onclick="location.reload()">立即刷新</button>
-<div class="hint">主数字=完整模型估算（v3 五模型集成+偏差修正）· 详情=实时口径/模型明细/调仓信号<br>
+<div class="hint adv">主数字=完整模型估算（v4 五模型集成+偏差修正）· 详情=实时口径/模型明细/调仓信号<br>
 更新完整模型：本地「一键更新并推送.bat」或 GitHub Actions 手动 Run · 数据非官方净值</div>
 </div>
 
@@ -632,9 +690,9 @@ if __name__ == "__main__":
     if d:
         d["snapshot_time"] = time.strftime("%Y-%m-%d %H:%M")
     html = build_html(d)
-    with open(os.path.join(DOCS, "index.html"), "w", encoding="utf-8") as f:
-        f.write(html)
+    out = os.path.join(DOCS, "index.html")
+    open(out, "w", encoding="utf-8").write(html)
+    print(f"[static] docs/index.html 已生成（快照中心 {d.get('P_final_corr','--') if d else '--'}%）")
     if d:
-        json.dump(d, open(os.path.join(DOCS, "data.json"), "w", encoding="utf-8"),
-                  ensure_ascii=False, indent=2)
-    print(f"[static] docs/index.html 已生成（快照中心 {d.get('P_final_corr') if d else 'N/A'}%）")
+        data_out = os.path.join(DOCS, "data.json")
+        json.dump(d, open(data_out, "w", encoding="utf-8"), ensure_ascii=False, indent=2)

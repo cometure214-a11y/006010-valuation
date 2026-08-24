@@ -558,11 +558,18 @@ def build_html(d):
         intraday = d.get("intraday", {})
         sector_bars = build_sector_bars(intraday)
 
+        # 市场状态徽章（P2 状态感知：bull 红 / bear 绿 / range 灰，中文习惯涨红跌绿）
+        _reg = (d.get("market_state") or {})
+        _reg_txt = {"bull": "市场·牛", "bear": "市场·熊", "range": "市场·震荡"}.get(_reg.get("regime"), "市场·震荡")
+        _reg_bg = {"bull": "rgba(240,78,60,.15)", "bear": "rgba(48,164,108,.15)", "range": "rgba(139,148,163,.14)"}.get(_reg.get("regime"), "rgba(139,148,163,.14)")
+        _reg_fg = {"bull": "#f04e3c", "bear": "#30a46c", "range": "#a3adbd"}.get(_reg.get("regime"), "#a3adbd")
+
         hero = f"""
 <div class="hero">
   <div class="top-row">
     <span class="lbl">{lbl}</span>
     <span class="badge">{badge}</span>
+    <span class="badge" style="background:{_reg_bg};color:{_reg_fg}">{_reg_txt}</span>
   </div>
   <div class="main {cl(float(hero_main))}">{hero_main:+.2f}%</div>
   <div class="sub">{hero_sub}</div>

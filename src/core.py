@@ -993,3 +993,29 @@ def pcb_signal_strength(sens_by_window, theta_recent, beta_pcb, theta_now,
         "theta_now": round(float(theta_now), 4),
         "windows_pcb": [round(float(p), 4) for p in pcbs],
     }
+
+
+def market_regime(kl_market, lookback=20, vol_lookback=10, bull_thr=5.0, bear_thr=-5.0):
+    """市场状态感知（牛熊/震荡）：中证1000 收盘趋势 + 波动率。
+    兼容 BASKETS["market"] 的 {code: {date: close}} 嵌套结构。
+    返回 {regime: bull/bear/range, trend_pct, vol_pct, n}。
+    regime 供模型/页面做状态感知：bull 追涨环境、bear 防御环境、range 中性。"""
+    try:
+        if isinstance(kl_market, dict) and kl_market:
+            _inner = kl_market
+            _first = next(iter(_inner.values()))
+            if isinstance(_first, dict):              # {code: {date: close}}
+                _inner = next(iter(_inner.values()))
+            ds = sorted(_inner)
+            if len(ds) < lookback + 2:
+                return {"regime": "range", "trend_pct": 0.0, "vol_pct": 0.0, "n": len(ds)}
+            closes = [float(_inner[d]) for d in ds[-(lookback + 1):]]
+            trend = (closes[-1] / closes[0] - 1) * 100
+            rets = [closes[i] / closes[i - 1] - 1 for i in range(1, len(closes))]
+            vol = float(np.std(rets[-vol_lookback:])) * 100
+            regime = "bull" if trend >= bull_thr else ("bear" if trend <= bear_thr else "range")
+            return {"regime": regime, "trend_pct": round(trend, 2),
+                    "vol_pct": round(vol, 2), "n": len(closes)}
+    except Exception:
+        pass
+    return {"regime": "range", "trend_pct": 0.0, "vol_pct": 0.0, "n": 0}

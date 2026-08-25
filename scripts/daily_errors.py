@@ -29,6 +29,46 @@ def load(name):
         return None
 
 
+def load_baseline_est(nav_date):
+    """简单加权法基线估值：Σ(w_i × 个股涨跌_i) ÷ Σw_i（公式①）
+    返回 (估值涨幅%, 覆盖权重%)；数据不足返回 (None, None)。"""
+    try:
+        h = load("holdings.json")
+        if not h or not h.get("top10"):
+            return None, None
+        top10 = [(t["code"], float(t["weight"])) for t in h["top10"][:10]]
+        kl = load("klines.json")
+        if not kl:
+            return None, None
+        series = {}
+        for b in ("optical", "pcb", "semis"):
+            for code, s in kl.get(b, {}).items():
+                series[code] = s
+        num, wsum, miss = 0.0, 0.0, 0
+        for code, w in top10:
+            s = series.get(code)
+            if not s or nav_date not in s:
+                miss += 1
+                continue
+            dates = sorted(s.keys())
+            prev = None
+            for d in dates:
+                if d >= nav_date:
+                    break
+                prev = d
+            if prev is None:
+                miss += 1
+                continue
+            r = (s[nav_date] / s[prev] - 1) * 100
+            num += w * r
+            wsum += w
+        if wsum < 50:  # 覆盖不足视为不可用
+            return None, None
+        return num / wsum, wsum
+    except Exception:
+        return None, None
+
+
 def push(title, desp):
     data = urllib.parse.urlencode({"title": title, "desp": desp}).encode("utf-8")
     url = f"https://sctapi.ftqq.com/{SCKEY}.send"
@@ -63,6 +103,8 @@ def main():
         print("[errors] 官方净值或模型估算缺失，跳过")
         return 0
     err = nav_chg - est
+    base_est, base_wsum = load_baseline_est(nav_date)
+    base_err = (nav_chg - base_est) if base_est is not None else None
 
     # 入库（按日期去重，保留最近 90 日）
     hist = load("error_history.json") or {"records": []}
@@ -71,6 +113,8 @@ def main():
         "official": round(nav_chg, 4),
         "est": round(est, 4),
         "err": round(err, 4),
+        "base": round(base_est, 4) if base_est is not None else None,
+        "base_err": round(base_err, 4) if base_err is not None else None,
         "ts": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
     hist["records"] = [r for r in hist["records"] if r.get("date") != nav_date] + [rec]
@@ -87,7 +131,15 @@ def main():
     mae_all = sum(abs(r["err"]) for r in recs) / n_all if n_all else 0
     bias20 = sum(r["err"] for r in recs[-n20:]) / n20 if n20 else 0
 
+    # 基线对照统计（仅统计有 base_err 的记录）
+    base_recs = [r for r in recs if r.get("base_err") is not None]
+    n_base = len(base_recs)
+    base_mae = sum(abs(r["base_err"]) for r in base_recs) / n_base if n_base else 0
+    model_mae_same = sum(abs(r["err"]) for r in base_recs) / n_base if n_base else 0
+
     print(f"[errors] {nav_date} 误差 {err:+.2f}pp | 滚动MAE20 {mae20:.3f}% | 样本 {n_all} 日")
+    if base_est is not None:
+        print(f"[errors] 基线加权法 {base_est:+.2f}% (覆盖{base_wsum:.0f}%) | 基线误差 {base_err:+.2f}pp")
 
     if not SCKEY:
         print("[errors] 未配置 SENDKEY，跳过推送")
@@ -107,12 +159,29 @@ def main():
         f"官方涨跌：**{nav_chg:+.2f}%**",
         f"模型估算：**{est:+.2f}%**",
         f"**单日误差：{err:+.2f}pp**",
+    ]
+    if base_est is not None:
+        win = "✅ 集成更准" if abs(err) < abs(base_err) else ("⚠️ 基线更准" if abs(base_err) < abs(err) else "➖ 打平")
+        lines += [
+            "",
+            f"基线加权法：**{base_est:+.2f}%**（覆盖 {base_wsum:.0f}%）",
+            f"基线误差：{base_err:+.2f}pp → **{win}**",
+        ]
+    lines += [
         "",
         f"滚动 MAE（近20日）：**{mae20:.2f}%**",
         f"近7日 MAE：**{mae7:.2f}%**",
         f"累计 MAE（{n_all}日）：**{mae_all:.2f}%**",
         f"近20日偏差：{bias20:+.2f}%（>0 模型偏保守）",
     ]
+    if n_base >= 3:
+        lines += [
+            "",
+            f"📐 基线对照（{n_base}日样本）：",
+            f"  集成 MAE：**{model_mae_same:.2f}%**",
+            f"  基线 MAE：**{base_mae:.2f}%**",
+            f"  增益：{((base_mae - model_mae_same) / base_mae * 100) if base_mae else 0:+.1f}%",
+        ]
     if trend:
         lines.append("")
         lines.append(trend)

@@ -72,7 +72,7 @@ def build_desp(d):
         mline = "  ".join(f"{k.split('_')[1]} {v:+.2f}%" for k, v in models.items())
         lines.append(f"模型明细：{mline}")
     lines.append("")
-    lines.append("[点击查看完整估值页面](https://cometure214-a11y.github.io/006010-valuation/)")
+    lines.append("[点击查看完整估值页面](http://106.55.94.208/)")
     return "\n\n".join(lines)
 
 

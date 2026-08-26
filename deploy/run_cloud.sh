@@ -4,15 +4,20 @@
 # 由 cron 每日收盘后触发：抓数→反推→多模型→生成页面→部署→推送
 # ============================================
 set -e
-cd /opt/fund-006010
+APP=/opt/006010-valuation
+cd "$APP"
 export PATH="/usr/local/bin:$PATH"
-LOG=/opt/fund-006010/run.log
+LOG="$APP/run.log"
 SENDKEY="SCT401609TYQYPkAVCITdAEPhTSiTqD1nt"
 
 echo "===== $(date '+%F %T') 开始 =====" >> $LOG
 
 echo "[1/6] 更新代码" >> $LOG
-git pull --ff-only origin main 2>>$LOG || echo "git pull 跳过" >> $LOG
+# 服务器每次运行会改写 cache/*.json 与 docs/*（已跟踪产物），导致 git pull 冲突、代码永远停在旧版。
+# 改为：先 stash 本地数据改动 → 强拉 main → 丢弃 stash（产物本轮会重新生成，无需保留）
+git stash push -m "cron-auto-$(date +%Y%m%d-%H%M)" >/dev/null 2>&1 || true
+git pull --ff-only origin main >>$LOG 2>&1 || { echo "[错误] git pull 失败，中止本轮（stash 已保留可查）" >>$LOG; exit 1; }
+git stash drop >/dev/null 2>&1 || true
 
 echo "[2/6] 抓取数据 fetch_cloud" >> $LOG
 python3 scripts/fetch_cloud.py >> $LOG 2>&1

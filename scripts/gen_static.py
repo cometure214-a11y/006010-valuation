@@ -45,12 +45,13 @@ body{background:#0b0f15;color:#e6e9ef;
 .up{color:#f04e3c}.down{color:#30a46c}.flat{color:#e6e9ef}
 .up-bg{background:rgba(240,78,60,.12)}.down-bg{background:rgba(48,164,108,.12)}
 
-.hd{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 2px 14px}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:4px 2px 14px;flex-wrap:wrap}
 .fund{font-size:15.5px;font-weight:700;line-height:1.4}
 .fund small{display:block;font-size:11px;color:#8892a3;font-weight:500;margin-top:2px;letter-spacing:.5px}
-.time{font-size:11px;color:#6b7280;text-align:right;line-height:1.6}
+.time{font-size:11px;color:#6b7280;text-align:right;line-height:1.7}
 .time .live{display:inline-block;width:6px;height:6px;border-radius:50%;background:#30a46c;
             animation:pulse 1.6s infinite;margin-right:5px;vertical-align:middle}
+.time .adv-toggle{margin-left:0;margin-top:5px}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 /* ─── Hero 常驻层 ─── */
@@ -61,11 +62,11 @@ body{background:#0b0f15;color:#e6e9ef;
               background:radial-gradient(circle,rgba(240,78,60,.10) 0%,transparent 70%);pointer-events:none}
 .hero::after{content:'';position:absolute;bottom:-30px;left:-30px;width:140px;height:140px;
              background:radial-gradient(circle,rgba(78,201,176,.07) 0%,transparent 70%);pointer-events:none}
-.hero .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hero .top-row{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .hero .lbl{font-size:11.5px;color:#8892a3;letter-spacing:1.5px}
 .badge{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(78,201,176,.12);
-       color:#4ec9b0;font-weight:700;letter-spacing:.5px}
-.hero .main{font-size:76px;font-weight:800;line-height:1;letter-spacing:-3px;
+       color:#4ec9b0;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.hero .main{font-size:clamp(52px,20vw,76px);font-weight:800;line-height:1;letter-spacing:-3px;
             font-variant-numeric:tabular-nums;
             text-shadow:0 0 30px rgba(240,78,60,.25)}
 .hero .main.down{text-shadow:0 0 30px rgba(48,164,108,.25)}
@@ -145,10 +146,10 @@ details[open] summary .arr{transform:rotate(90deg)}
 
 /* 行业热力条 */
 .sector-row{display:flex;align-items:center;gap:8px;padding:5px 0}
-.sector-row .s-name{width:52px;font-size:11px;color:#8892a3;text-align:right}
-.sector-row .s-bar{flex:1;height:5px;border-radius:3px;background:#1a2030;overflow:hidden}
+.sector-row .s-name{width:52px;font-size:11px;color:#8892a3;text-align:right;flex:none}
+.sector-row .s-bar{flex:1;min-width:0;height:5px;border-radius:3px;background:#1f2735;overflow:hidden}
 .sector-row .s-fill{height:100%;border-radius:3px}
-.sector-row .s-val{width:52px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.sector-row .s-val{width:52px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;flex:none;text-align:right}
 
 /* 个股列表 */
 .list{display:flex;flex-direction:column;gap:5px;padding-top:8px}
@@ -170,7 +171,7 @@ details[open] summary .arr{transform:rotate(90deg)}
 
 /* ─── v4：数据质量横幅 / 估算模式徽标 / 覆盖率条 ─── */
 .banner{display:flex;gap:8px;align-items:flex-start;border-radius:12px;padding:10px 12px;
-        margin-bottom:10px;font-size:11.5px;line-height:1.6}
+        margin-bottom:10px;font-size:11.5px;line-height:1.6;grid-column:1/-1}
 .banner.warn{background:rgba(220,202,106,.10);border:1px solid rgba(220,202,106,.22);color:#dcdcaa}
 .banner.err{background:rgba(240,78,60,.10);border:1px solid rgba(240,78,60,.26);color:#f0806f}
 .banner .ico{flex:none;font-weight:700}
@@ -191,15 +192,67 @@ details[open] summary .arr{transform:rotate(90deg)}
 .wbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05);margin-top:5px}
 .wbar i{display:block;height:100%}
 
+/* ─── 窄屏 (<= 768px) 修复三口径框被裁、行业条挤压 ─── */
+@media (max-width:768px){
+  .wrap{padding:12px 12px 24px}
+  .hero{padding:18px 14px 12px;border-radius:16px}
+  .hero .top-row{gap:5px}
+  .hero .ref{font-size:10.5px;line-height:1.5;white-space:normal}
+  .hero .lbl{font-size:11px}
+  .badge{font-size:9.5px;padding:2px 8px}
+  .spark{margin-top:10px;padding-top:10px}
+  .spark svg{height:88px}
+  .metrics{grid-template-columns:1.4fr 1fr;gap:6px}
+  .m{padding:10px 6px}
+  .m .v{font-size:13.5px}
+  .m-range .bar{margin:6px 4px 3px}
+  /* 三口径窄屏单列（避免文字裁切） */
+  .rt-hero{flex-direction:column;gap:6px}
+  .rt-box{flex:1 1 100%;min-width:0;padding:10px 8px}
+  .rt-box:last-child{flex:1 1 100%}
+  .rt-box .rt-val{font-size:18px}
+  .rt-box .rt-lbl{font-size:10.5px}
+  .rt-box .rt-sub{font-size:9.5px;margin-top:3px}
+  .rt-tip{font-size:10.5px;line-height:1.65;padding:8px 10px}
+  /* 行业条窄屏紧凑+提亮 */
+  .sector-row{gap:7px;padding:6px 0}
+  .sector-row .s-name{width:46px;font-size:11px}
+  .sector-row .s-bar{min-width:0;height:6px;background:#252e3d}
+  .sector-row .s-val{width:56px;font-size:11.5px}
+  /* 个股列表窄屏 */
+  .item{padding:6px 9px;font-size:11.5px}
+  .item .code{font-size:10px}
+  /* details 紧凑 */
+  summary{padding:10px 14px;font-size:12.5px}
+  .detail{padding:0 14px 10px}
+  .detail .row{font-size:12px;padding:5px 0}
+  /* 顶部 header */
+  .hd{padding:2px 0 10px;gap:6px}
+  .fund{font-size:14.5px}
+  .fund small{font-size:10.5px}
+  .time{font-size:10.5px}
+  /* 按钮区 */
+  .btn{padding:10px;font-size:12.5px}
+}
 /* ─── v2 桌面响应式：>=1024px 左右分栏 ─── */
+/* 修正：.col-side{display:grid} 在 .adv{display:none} 之后定义（同特异性后定义胜出），
+   导致 .col-side.adv 默认不隐藏。用更高特异性强制 .adv 隐藏生效 */
+.adv, .col-side.adv{display:none}
+body.adv-on .adv{display:block}
+body.adv-on .col-side.adv{display:grid;grid-template-columns:1fr;gap:8px}
 @media (min-width:1024px){
-  .wrap{max-width:1120px;padding:18px 24px 32px}
-  .grid-main{display:grid;grid-template-columns:minmax(0,65%) minmax(0,35%);gap:14px;align-items:start}
+  .wrap{max-width:1160px;padding:18px 24px 32px}
+  .grid-main{display:grid;grid-template-columns:minmax(0,64%) minmax(0,36%);gap:14px;align-items:start}
+  .hero-wrap{grid-column:1/-1;display:grid;grid-template-columns:1.45fr 1fr;gap:10px;align-items:stretch}
+  .hero-wrap .hero{margin-bottom:0}
+  .hero-wrap .metrics{margin-bottom:0;display:flex;flex-direction:column;gap:8px}
+  .hero-wrap .metrics .m{flex:1;display:flex;flex-direction:column;justify-content:center}
   .col-side{display:grid;grid-template-columns:1fr;gap:8px}
+  /* 桌面大屏信息密度高：col-side 默认常显（不受 .adv 隐藏影响） */
+  .col-side.adv{display:grid;grid-template-columns:1fr;gap:8px}
   .hero{padding:26px 28px 18px}
   .hero .main{font-size:92px}
   .spark svg{height:130px}
-  .metrics{grid-template-columns:1.6fr 1fr}
 }
 """
 
@@ -215,8 +268,11 @@ const PCB_CODES = __PCB_CODES__;      // PCB 篮子（模型候选池）
 const EM_PREFIX = {sh:'1', sz:'0'};
 let emFired = false;
 function loadQuotes(){
+  const old = document.getElementById('qt_script');
+  if(old) old.remove();
   const s = TOP10.map(t=>t.s).join(',') + ',' + PCB_CODES.join(',') + ',sz000852';
   const sc = document.createElement('script');
+  sc.id = 'qt_script';
   sc.src = 'https://qt.gtimg.cn/q=' + s;
   sc.onload = function(){ if(!calcRealtime()) loadEM(); };
   sc.onerror = function(){ loadEM(); };
@@ -225,10 +281,11 @@ function loadQuotes(){
 function loadEM(){
   if(emFired) return;
   emFired = true;
+  document.querySelectorAll('script[id^="em_script_"]').forEach(s=>s.remove());
   const all = TOP10.map(t=>t.s).concat(PCB_CODES, ['sz000852']);
   let done = 0;
   all.forEach(code=>{
-    const m = code.match(/^(sh|sz)(\d+)$/);
+    const m = code.match(/^(sh|sz)(\\d+)$/);
     const secid = EM_PREFIX[m[1]] + '.' + m[2];
     const cb = 'em_cb_' + m[2];
     window[cb] = function(d){
@@ -240,6 +297,7 @@ function loadEM(){
       if(++done >= all.length) calcRealtime();
     };
     const sc = document.createElement('script');
+    sc.id = 'em_script_' + code;
     sc.src = 'https://push2.eastmoney.com/api/qt/stock/get?secid=' + secid +
              '&fields=f58,f170&fltt=2&invt=2&cb=' + cb;
     document.body.appendChild(sc);
@@ -322,7 +380,9 @@ function setVal(id, v, boxId){
   const el = document.getElementById(id);
   el.textContent = fmt(v,2);
   el.className = 'rt-val ' + cl(v);
-  document.getElementById(boxId).className = 'rt-box' + (boxId==='rt_adj_box' ? ' rt-main' : '');
+  const box = document.getElementById(boxId);
+  box.classList.remove('rt-main');
+  if(boxId === 'rt_adj_box') box.classList.add('rt-main');
 }
 function mktPct(){
   const v = window['v_sz000852'];
@@ -508,7 +568,7 @@ def build_html(d):
         mae = d.get("mae", {})
         pcb_sig = d.get("pcb_signal", "无信号")
         pill = {"强信号":"strong","中等信号":"mid","弱信号":"weak"}.get(pcb_sig,"weak")
-        m_line = "  ".join(f"{k.split('_')[1]} {v:+.2f}%" for k,v in models.items())
+        m_line = "  ".join(f"{k.split('_')[1]} {v:+.2f}%" for k,v in models.items()) if models else "无模型输出（数据不足）"
         conf_pill = {"高":"high","中等":"mid","低":"weak"}.get(conf,"weak")
 
         mae_p1 = mae.get("P1", 0)
@@ -529,7 +589,8 @@ def build_html(d):
 
         conf_lvl = conf_pill
         if conf_lvl == "high":
-            conf_plain_html = f'<span class="conf-plain">高准确度 · 历史误差约 ±{mae_p3:.1f}%</span>'
+            conf_plain_html = (f'<span class="conf-plain">高准确度 · 历史误差约 ±{mae_p3:.1f}%</span>'
+                               if mae else '<span class="conf-plain">高准确度</span>')
         elif conf_lvl == "mid":
             conf_plain_html = '<span class="conf-plain" style="background:rgba(220,202,106,.12);color:#dcdcaa">中等准确度 · 参考谨慎</span>'
         else:
@@ -599,7 +660,7 @@ def build_html(d):
 <div class="rt-hero">
   <div class="rt-box" id="rt_con_box"><div class="rt-lbl">保守口径</div><div class="rt-val" id="rt_con">--</div><div class="rt-sub">剩余仓位≈现金</div></div>
   <div class="rt-box rt-main" id="rt_adj_box"><div class="rt-lbl">调仓修正 ★</div><div class="rt-val" id="rt_adj">--</div><div class="rt-sub">θ_pcb={theta_pcb*100:.1f}%</div></div>
-  <div class="rt-box norm" id="rt_norm_box"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div><div class="rt-sub">前十大=全仓</div></div>
+  <div class="rt-box norm" id="rt_norm_box" title="归一化口径：假设前十大=整个基金（上限估算）"><div class="rt-lbl">归一化</div><div class="rt-val" id="rt_norm_val">--</div><div class="rt-sub">前十大=全仓</div></div>
 </div>
 <div class="rt-tip">
 <b>保守口径</b>=Q2前十大加权，剩余~15%仓位按现金/未知计（下限）。<br>
@@ -677,9 +738,10 @@ def build_html(d):
 </div>
 
 <div class="grid-main">
+<div class="hero-wrap">
 {hero}
 {metrics}
-
+</div>
 {details}
 </div>
 

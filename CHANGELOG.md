@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-08-26] 微信推送去重 + 详情页链接指向腾讯云最新版
+- 改动：`scripts/notify.py` 详情页链接由 GitHub Pages 改为 `http://106.55.94.208/`；`.github/workflows/nav-watch.yml` 的 Server酱推送步骤停用（`if: ${{ false }}`）
+- 原因：GitHub Actions 与腾讯云 cron 双通道各自检测净值并推送，晚间微信收到多条重复推送；且推送详情页原指向 GitHub Pages，非腾讯云每日更新版本
+- 影响：微信仅收腾讯云 cron 一条推送，点击详情直达最新估值页面；GitHub Actions 仍正常跑模型、部署 Pages，仅不再推送
+- 验证：notify.py 链接替换；workflow 语法校验通过；腾讯云页面 `http://106.55.94.208/` HTTP 200
+
 ## [2026-08-25] 误差日报加入「基线对照」——用数据验证集成增益
 - 改动：`scripts/daily_errors.py` 新增 `load_baseline_est()`（简单加权法公式① Σwᵢ×rᵢ/Σwᵢ）
   - 误差库记录新增 `base` / `base_err` 字段（与模型误差同日积累，保留 90 日）

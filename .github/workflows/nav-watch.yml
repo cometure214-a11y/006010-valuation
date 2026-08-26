@@ -80,7 +80,9 @@ jobs:
         uses: actions/deploy-pages@v4
 
       - name: Server酱推送通知
-        if: steps.check.outputs.updated == '1'
+        # 2026-08-26 停用：微信推送统一由腾讯云 cron 执行（deploy/run_cloud.sh → notify.py），
+        # 避免与 GitHub Actions 双通道重复推送。如需恢复请把 if 改回 steps.check.outputs.updated == '1'
+        if: ${{ false }}
         env:
           SCKEY: ${{ secrets.SCKEY }}
         run: python scripts/notify.py "$SCKEY"

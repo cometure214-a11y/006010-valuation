@@ -80,6 +80,17 @@ TRIM_MAD = 4.5                # 4.5×原始MAD ≈ 3×1.4826×MAD ≈ 3σ
 # 给最小权重下限，避免"全段平均劣势"掩盖"分化日优势"。
 # 调优：原 0.10 太激进导致 45%，回归 0.15-0.20 区间。
 P5_MIN_WEIGHT = 0.15
+# P5 动态剔除（fix #1，2026-08-28）：P5 个股反推在暴涨/暴跌日常失真
+# （如 08-27 暴涨日 P5 喊 -0.76% 而实盘 +6.96%），此时占位 MAE 毫无意义、
+# 0.15 下限反而拖累集成。判定 P5 偏离其他模型共识 > P5_OUTLIER_SIGMAS·σ 时，
+# 视为脏信号、当日剔除（权重归 P1~P4）；正常日不触发，P0-2 下限照常生效。
+P5_OUTLIER_SIGMAS = 2.0
+# 绝对偏差下限(pp)：仅在 |P5-共识| 同时超过「相对 2σ」与「该绝对下限」时才剔除。
+# 必要性：平静日 P1~P4 共识极紧(σ≈0.03)，P5 正常 ±0.1pp 摆动也会触发 2σ → 会几乎每天误杀 P5、
+# 架空 P0-2；波动日他人本身离散(σ≈0.7)，P5 偏 1.6pp 属合理分歧，也不应剔除。
+# 本修复针对的是「暴涨/暴跌日 P5 喊反方向、误差达数 pp」的灾难性失真（如 08-27 P5=-0.76% vs
+# 共识 +6.08%，偏差 6.8pp）。取 2.0pp：仅捕获这类灾难性误差，正常/波动日 P5 的 15% 权重照常保留。
+P5_OUTLIER_ABS_FLOOR = 2.0
 
 # 集成参数（方法文档 §十）
 # --- 集成参数：由 tests/backtest_v3.py --tune / --decide 在 112 日样本上选出 ---
@@ -708,6 +719,41 @@ def ensemble_weights(maes, groups=None, cap=MODEL_WEIGHT_CAP, floor=MAE_FLOOR,
                "group_mae": {g: round(all_gmae[g], 4) for g in all_members},
                "dropped": dropped, "n_active": len(all_models) - len(dropped),
                "provisional_capped": sorted(prov) if use_prov else []}
+
+
+# ============================================================
+# 4.5 P5 动态剔除判定（fix #1）
+# ============================================================
+def p5_should_exclude(models, p5_key="P5_个股辅助", sigmas=P5_OUTLIER_SIGMAS,
+                     abs_floor=P5_OUTLIER_ABS_FLOOR):
+    """
+    P5 个股反推动态剔除判定（fix #1，方法文档 v4.1 §7 建议落地）。
+
+    当 P5 预测偏离「其他模型共识」同时满足以下两条时，判定为脏信号（个股反推在
+    暴涨/暴跌日常失真），返回 (True, diag) 供调用方当日剔除 P5、权重归一给 P1~P4：
+      1) |P5 - mu| > sigmas·σ   （相对其他模型离散度显著偏离）
+      2) |P5 - mu| > abs_floor   （绝对偏差达 ~1pp，排除平静日噪声误杀）
+    其中 mu=其他模型均值，σ=其他模型预测的样本标准差。
+
+    正常日 P5 贴近共识、绝对偏差 < 下限 → 不触发，P0-2 的 0.15 下限照常生效。
+    返回 (excluded: bool, diag: dict{consensus, sigma, dev, rel_threshold, abs_floor})
+    """
+    if p5_key not in models or models[p5_key] is None:
+        return False, {}
+    others = [v for k, v in models.items() if k != p5_key and v is not None]
+    if len(others) < 2:
+        return False, {}
+    mu = sum(others) / len(others)
+    var = sum((v - mu) ** 2 for v in others) / len(others)
+    sigma = var ** 0.5
+    dev = models[p5_key] - mu
+    rel_thr = sigmas * sigma
+    diag = {"consensus": round(mu, 4), "sigma": round(sigma, 4),
+            "dev": round(dev, 4), "rel_threshold": round(rel_thr, 4),
+            "abs_floor": abs_floor}
+    if sigma > 1e-9 and abs(dev) > rel_thr and abs(dev) > abs_floor:
+        return True, diag
+    return False, diag
 
 
 # ============================================================

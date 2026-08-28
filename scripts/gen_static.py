@@ -523,17 +523,24 @@ def build_error_spark(records):
 
 
 def build_sina_card(sina, model_est):
-    """新浪盘中估值（交叉验证源）。
-    口径 = 前十大重仓加权，与模型的多因子集成口径不同，且持仓数据存在滞后性。
+    """新浪盘中估值（实时交叉验证源）。
+
+    重要：新浪的 getEstimateNetworthPic 接口只返回【结算估算】(带 worth_date 日期、前十大重仓加权、滞后)，
+    并非盘中实时。真正的盘中实时行情在 hq.sinajs.cn（GBK 文本），但我们的服务器 IP 被新浪拦截，
+    故采用「服务器结算值兜底 + 页面在用户浏览器内 JSONP 实时覆盖」方案：
+      - 初始/兜底显示服务器抓取的结算值；
+      - 浏览器加载 <script charset=gbk src="https://hq.sinajs.cn/list=fu_006010"> 直连新浪，
+        解析 hq_str_fu_006010（时间,估值,单位净值,累计单位净值,?,估算增长率,日期）实时刷新涨跌幅/净值/时间；
+      - 脚本标签天然绕过 CORS，且用户本机 IP 通常不被拦，从而盘中实时跳动。
     """
-    if not sina or not sina.get("ok"):
-        return ('<details class="card"><summary>新浪盘中估值（交叉验证） '
-                '<span class="arr">›</span></summary><div class="detail">'
-                '<div class="tip">新浪估值暂不可用（非交易时段或接口未返回），'
-                '下次调度会自动重取。</div></div></details>')
-    est = sina.get("est_pct")
-    nav = sina.get("est_nav")
-    wdate = sina.get("worth_date") or "--"
+    fb_ok = bool(sina and sina.get("ok"))
+    if fb_ok:
+        est = sina.get("est_pct")
+        nav = sina.get("est_nav")
+        wdate = sina.get("worth_date") or "--"
+    else:
+        est = nav = None
+        wdate = "--"
     ws = str(wdate)
     if len(ws) == 8 and ws.isdigit():
         wdate = "%s-%s-%s" % (ws[:4], ws[4:6], ws[6:])
@@ -545,14 +552,49 @@ def build_sina_card(sina, model_est):
     else:
         dcls = "up" if diff > 0.005 else ("down" if diff < -0.005 else "flat")
         dtxt = "%+.2fpp（新浪%s模型）" % (diff, "高于" if diff > 0 else "低于")
-    return f'''<details class="card" open><summary>新浪盘中估值（交叉验证） <span class="arr">›</span></summary><div class="detail">
-  <div class="row"><span class="k">新浪估算涨跌幅</span><span class="v2">{est:+.2f}%</span></div>
-  <div class="row"><span class="k">新浪估算净值</span><span class="v2">{nav if nav is not None else '--'}</span></div>
-  <div class="row"><span class="k">新浪数据日期</span><span class="v2">{wdate}</span></div>
-  <div class="row"><span class="k">与模型估算差</span><span class="v2 {dcls}">{dtxt}</span></div>
-  <div class="tip">新浪口径为<b>前十大重仓加权</b>，与模型的多因子集成口径不同，且持仓数据存在滞后；
-  两者差异较大时通常提示<b>基金已调仓</b>或当日行情极端，仅作交叉参考，不作交易依据。</div>
-</div></details>'''
+    est_txt = ("%+.2f%%" % est) if est is not None else "--"
+    nav_txt = ("%.4f" % nav) if nav is not None else "--"
+    mraw = ("%s" % model_est) if model_est is not None else ""
+    badge_style = ("display:inline-block;font-size:11px;line-height:1;padding:2px 7px;"
+                   "border-radius:9px;background:#eef0f2;color:#6b7280;margin-left:6px;vertical-align:middle")
+    live_js = '''
+  <script charset="gbk" src="https://hq.sinajs.cn/list=fu_006010"></script>
+  <script>
+  (function(){
+    try{
+      var s = window.hq_str_fu_006010; if(!s) return;
+      var a = s.split(','); if(a.length < 6) return;
+      var estNav = parseFloat(a[1]); var g = parseFloat(String(a[5]).replace(/%/g,''));
+      var time = a[0]||''; var date = a[6]||'';
+      if(isNaN(g)) return;
+      var elPct=document.getElementById('sina_pct'); var elNav=document.getElementById('sina_nav');
+      var elTime=document.getElementById('sina_time'); var elStat=document.getElementById('sina_status');
+      var mEl=document.getElementById('sina_model_diff');
+      var cls = g>0.005?'up':(g<-0.005?'down':'flat');
+      if(elPct){ elPct.textContent=(g>=0?'+':'')+g.toFixed(2)+'%'; elPct.className='v2 '+cls; }
+      if(elNav && !isNaN(estNav)) elNav.textContent=estNav.toFixed(4);
+      if(elTime) elTime.textContent=(date+' '+time).trim();
+      if(elStat){
+        var now=new Date(); var hh=now.getHours()*60+now.getMinutes();
+        var trading=(hh>=570 && hh<=900);
+        var t=now.getFullYear()+'-'+('0'+(now.getMonth()+1)).slice(-2)+'-'+('0'+now.getDate()).slice(-2);
+        if(trading && date===t){ elStat.textContent='盘中实时'; elStat.style.background='#e6f7ec'; elStat.style.color='#1a8a4f'; }
+        else { elStat.textContent='最近估算(非交易时段)'; elStat.style.background='#eef0f2'; elStat.style.color='#6b7280'; }
+      }
+      if(mEl){ var md=parseFloat(mEl.getAttribute('data-model'));
+        if(!isNaN(md)){ var d=g-md; var dc=d>0.005?'up':(d<-0.005?'down':'flat');
+          mEl.textContent=(d>=0?'+':'')+d.toFixed(2)+'pp（新浪'+(d>0?'高于':'低于')+'模型）'; mEl.className='v2 '+dc; } }
+    }catch(e){}
+  })();
+  </script>'''
+    return f'''<details class="card" open><summary>新浪盘中估值（实时交叉验证） <span class="arr">›</span></summary><div class="detail">
+  <div class="row"><span class="k">估算涨跌幅</span><span class="v2" id="sina_pct">{est_txt}</span><span class="badge" id="sina_status" style="{badge_style}">服务器结算值</span></div>
+  <div class="row"><span class="k">估算净值</span><span class="v2" id="sina_nav">{nav_txt}</span></div>
+  <div class="row"><span class="k">更新时间</span><span class="v2" id="sina_time">{wdate}</span></div>
+  <div class="row"><span class="k">与模型估算差</span><span class="v2 {dcls}" id="sina_model_diff" data-model="{mraw}">{dtxt}</span></div>
+  <div class="tip">盘中实时行情由<b>你的浏览器直连新浪</b>(<code>hq.sinajs.cn</code>)获取——服务器 IP 被拦故走客户端；
+  接口受限或休市时回退到<b>服务器结算值</b>(新浪前十大重仓加权，带 <b>worth_date</b> 滞后)。差异大通常提示已调仓或当日极端，仅作交叉参考。</div>
+</div>{live_js}</details>'''
 
 
 def build_html(d):

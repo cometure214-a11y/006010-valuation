@@ -788,6 +788,37 @@ def test_result_contract():
 
 
 # ============================================================
+def test_p5_should_exclude():
+    """fix #1：P5 个股反推在暴涨/暴跌日失真时动态剔除（>2σ 且绝对偏差>2pp），
+    正常/波动日保留以不架空 P0-2 最小权重保护。"""
+    section("P5 动态剔除 (fix #1)")
+    # 暴涨日：P1~P4 共识 +6.08%，P5 喊 -0.76%（偏差 -6.8pp 失真）→ 剔除
+    ex, diag = core.p5_should_exclude(
+        {"P1_Q2静态": 6.1, "P2_调仓替代": 5.8, "P3_行业因子": 6.4,
+         "P4_层级组合": 6.0, "P5_个股辅助": -0.76}, "P5_个股辅助")
+    check("暴涨日 P5 失真(偏差6.8pp) 剔除", ex is True, str(diag))
+    # 正常日：P1~P4 共识 +0.51%，P5 +0.60%（偏差0.09pp）→ 保留
+    ex2, _ = core.p5_should_exclude(
+        {"P1_Q2静态": 0.52, "P2_调仓替代": 0.48, "P3_行业因子": 0.55,
+         "P4_层级组合": 0.50, "P5_个股辅助": 0.60}, "P5_个股辅助")
+    check("正常日 P5 贴近共识 保留", ex2 is False)
+    # 波动日 P5 偏 1.6pp（<2pp 绝对下限）→ 保留（合理分歧，不误杀）
+    ex3, _ = core.p5_should_exclude(
+        {"P1_Q2静态": -0.5, "P2_调仓替代": 1.5, "P3_行业因子": 0.5,
+         "P4_层级组合": 1.0, "P5_个股辅助": -1.0}, "P5_个股辅助")
+    check("波动日 P5 偏1.6pp(<2pp下限) 保留", ex3 is False)
+    # σ=0（P1~P4 完全相同）不误杀（无离散度可判定）
+    ex4, _ = core.p5_should_exclude(
+        {"P1_Q2静态": 0.5, "P2_调仓替代": 0.5, "P3_行业因子": 0.5,
+         "P4_层级组合": 0.5, "P5_个股辅助": 5.0}, "P5_个股辅助")
+    check("σ=0 不剔除", ex4 is False)
+    # 无 P5 → 不剔除
+    ex5, _ = core.p5_should_exclude(
+        {"P1_Q2静态": 0.5, "P2_调仓替代": 0.5, "P3_行业因子": 0.5,
+         "P4_层级组合": 0.5}, "P5_个股辅助")
+    check("无 P5 不剔除", ex5 is False)
+
+
 if __name__ == "__main__":
     out("=" * 62)
     out("006010 估值系统单元测试 v4 (无网络)")
@@ -797,7 +828,7 @@ if __name__ == "__main__":
                test_degradation, test_trade_calendar, test_date_consistency,
                test_bias_correction, test_confidence_score, test_data_validation,
                test_error_metrics, test_pcb_signal, test_data_hygiene,
-               test_result_contract):
+               test_result_contract, test_p5_should_exclude):
         try:
             fn()
         except Exception as e:

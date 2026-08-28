@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-08-28] fix #1：P5 个股反推动态剔除（暴涨/暴跌日失真自动排除）
+- 改动：新增 `core.p5_should_exclude(models)`（root 与 src 均含）；`fund_valuation_v2.py` 在集成前检测 P5 是否偏离 P1~P4 共识 `>2σ` 且绝对偏差 `>2.0pp`，满足则当日剔除 P5（pop 出 models/maes/provisional），权重归一给 P1~P4；result 新增 `p5_excluded_today` / `p5_outlier_diag` 字段。
+- 原因：08-27 暴涨日 P5 喊 -0.76% 而实盘 +6.96%，占位 MAE 无意义、0.15 下限反而拖累集成（MEMORY 待修 #1）。文档原建议"降权至 0.15"对长期坐在下限的 P5 是 no-op，失真日应整支剔除。
+- 影响：仅暴涨/暴跌等 P5 误差达数 pp 的灾难性失真日改变集成结果；正常/波动日 P5 权重不变，P0-2 下限照常。生产路径 `src/` 仅引入本修复（未顺带同步 P0-2/3，避免扩大变更面与测试回归）。
+- 验证：`tests/test_core.py::test_p5_should_exclude` 5/5 通过；全量套件相对已提交基线零新增失败（7 项属既有环境问题：numpy/交易日历/缓存数据，与本次无关）。
+
 ## [2026-08-26] 微信推送去重 + 详情页链接指向腾讯云最新版
 - 改动：`scripts/notify.py` 详情页链接由 GitHub Pages 改为 `http://106.55.94.208/`；`.github/workflows/nav-watch.yml` 的 Server酱推送步骤停用（`if: ${{ false }}`）
 - 原因：GitHub Actions 与腾讯云 cron 双通道各自检测净值并推送，晚间微信收到多条重复推送；且推送详情页原指向 GitHub Pages，非腾讯云每日更新版本
@@ -56,7 +62,7 @@
 - 验证：页面 200；估值跑通（08-24 预测 0.5582 置信度 86/100）
 
 ## [2026-08-23] 修复 core.py 语法错误（rmse 括号）
-- 改动：`src/core.py` L624，`"rmse": round(float(np.sqrt(np.mean(e ** 2)))), 4)` 括号位置修正
+- 改动：`src/core.py` L624，`"rmse": round(float(np.sqrt(np.mean(e ** 2))), 4)` 括号位置修正
 - 原因：括号错位导致 SyntaxError
 - 影响：core.py 恢复可导入
 - 验证：py_compile 通过

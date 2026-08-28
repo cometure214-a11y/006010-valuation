@@ -38,7 +38,7 @@ sys.path.insert(0, HERE)
 import core
 from core import (TOP10, TOP10_W, SUM_W, BASKETS, FACTOR_LABELS,
                   W_BASE, W_SHORT, W_FAST, HALF_LIFE, MAE_FLOOR,
-                  TRIM_MAD, P5_MIN_WEIGHT)
+                  TRIM_MAD, P5_MIN_WEIGHT, P5_OUTLIER_SIGMAS)
 
 NAME = {"optical": "光通信", "pcb": "PCB", "semis": "半导体", "market": "市场(中证1000)"}
 # P5 无历史序列，MAE 用保守代理值（不可用 P3 的 MAE 直接冒充，会高估其权重）
@@ -390,6 +390,14 @@ models = {"P1_Q2静态": P1, "P2_调仓替代": P2, "P3_行业因子": P3, "P4_�
 if P5 is not None:
     models["P5_个股辅助"] = P5
 
+# ---- P5 动态剔除（fix #1）：P5 偏离 P1~P4 共识 > P5_OUTLIER_SIGMAS·σ 时判为脏信号 ----
+# 正常日不触发，P0-2 的 0.15 下限照常；仅暴涨/暴跌等失真日剔除，权重归 P1~P4。
+p5_excluded = False
+p5_diag = {}
+if P5 is not None:
+    p5_excluded, p5_diag = core.p5_should_exclude(
+        models, "P5_个股辅助", P5_OUTLIER_SIGMAS)
+
 # ============================================================
 # 8. 集成（v4：同源分组去重）
 # ============================================================
@@ -406,7 +414,15 @@ print(f"[P5 误差来源] {p5_mae_src}"
       + (f" → MAE={p5_mae_real:.3f}%" if p5_mae_real is not None else ""))
 
 # P0-2 优化：P5 设最小权重保护，豁免择优闸门（独立信息源，分化日优势不可被全段平均劣势掩盖）
-_min_weights = {"P5_个股辅助": P5_MIN_WEIGHT} if P5 is not None else None
+# fix #1：若 P5 被判定为 outlier（>2σ 失真），当日整支剔除，权重归 P1~P4（突破 0.15 下限）。
+if p5_excluded:
+    models.pop("P5_个股辅助", None)
+    maes.pop("P5_个股辅助", None)
+    provisional.discard("P5_个股辅助")
+    print(f"[P5 动态剔除] P5={P5:+.2f}% 偏离 P1~P4 共识 {p5_diag.get('consensus',0):+.2f}%"
+          f"±{p5_diag.get('sigma',0):.2f}%（偏差 {p5_diag.get('dev',0):+.2f}%，"
+          f"超阈值 {p5_diag.get('threshold',0):.2f}%）→ 当日剔除，权重归 P1~P4")
+_min_weights = {"P5_个股辅助": P5_MIN_WEIGHT} if (P5 is not None and not p5_excluded) else None
 weights, ens_info = core.ensemble_weights(maes, provisional=provisional,
                                           min_weights=_min_weights)
 print(f"[集成分组] " + " | ".join(
@@ -578,6 +594,8 @@ result = {
         "weight_cap": core.MODEL_WEIGHT_CAP,
         "provisional_cap": core.PROVISIONAL_WEIGHT_CAP,
         "min_weights": (_min_weights or {}),
+        "p5_excluded_today": bool(p5_excluded),
+        "p5_outlier_diag": p5_diag,
         "dropped": ens_info["dropped"],
         "n_active": ens_info["n_active"],
         "provisional_capped": ens_info["provisional_capped"],
@@ -592,8 +610,10 @@ result = {
     "p0_optimizations": {
         "trim_mad": TRIM_MAD,
         "p5_min_weight": P5_MIN_WEIGHT,
+        "p5_outlier_sigmas": P5_OUTLIER_SIGMAS,
+        "p5_dynamic_exclusion": True,
         "bias_momentum": True,
-        "note": "P0-1 篮子MAD截尾 + P0-2 P5最小权重保护 + P0-3 偏差修正动量增强",
+        "note": "P0-1 篮子MAD截尾 + P0-2 P5最小权重保护 + fix#1 P5>2σ动态剔除 + P0-3 偏差修正动量增强",
     },
     # --- 数据卫生（收盘价/盘中价隔离留痕）---
     "data_hygiene": {

@@ -62,7 +62,7 @@
 - 验证：页面 200；估值跑通（08-24 预测 0.5582 置信度 86/100）
 
 ## [2026-08-23] 修复 core.py 语法错误（rmse 括号）
-- 改动：`src/core.py` L624，`"rmse": round(float(np.sqrt(np.mean(e ** 2))), 4)` 括号位置修正
+- 改动：`src/core.py` L624，`"rmse": round(float(np.sqrt(np.mean(e ** 2)))), 4)` 括号位置修正
 - 原因：括号错位导致 SyntaxError
 - 影响：core.py 恢复可导入
 - 验证：py_compile 通过

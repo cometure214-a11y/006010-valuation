@@ -521,6 +521,40 @@ def build_error_spark(records):
 </div>'''
     return svg
 
+
+def build_sina_card(sina, model_est):
+    """新浪盘中估值（交叉验证源）。
+    口径 = 前十大重仓加权，与模型的多因子集成口径不同，且持仓数据存在滞后性。
+    """
+    if not sina or not sina.get("ok"):
+        return ('<details class="card"><summary>新浪盘中估值（交叉验证） '
+                '<span class="arr">›</span></summary><div class="detail">'
+                '<div class="tip">新浪估值暂不可用（非交易时段或接口未返回），'
+                '下次调度会自动重取。</div></div></details>')
+    est = sina.get("est_pct")
+    nav = sina.get("est_nav")
+    wdate = sina.get("worth_date") or "--"
+    ws = str(wdate)
+    if len(ws) == 8 and ws.isdigit():
+        wdate = "%s-%s-%s" % (ws[:4], ws[4:6], ws[6:])
+    diff = None
+    if est is not None and model_est is not None:
+        diff = float(est) - float(model_est)
+    if diff is None:
+        dcls, dtxt = "", "--"
+    else:
+        dcls = "up" if diff > 0.005 else ("down" if diff < -0.005 else "flat")
+        dtxt = "%+.2fpp（新浪%s模型）" % (diff, "高于" if diff > 0 else "低于")
+    return f'''<details class="card" open><summary>新浪盘中估值（交叉验证） <span class="arr">›</span></summary><div class="detail">
+  <div class="row"><span class="k">新浪估算涨跌幅</span><span class="v2">{est:+.2f}%</span></div>
+  <div class="row"><span class="k">新浪估算净值</span><span class="v2">{nav if nav is not None else '--'}</span></div>
+  <div class="row"><span class="k">新浪数据日期</span><span class="v2">{wdate}</span></div>
+  <div class="row"><span class="k">与模型估算差</span><span class="v2 {dcls}">{dtxt}</span></div>
+  <div class="tip">新浪口径为<b>前十大重仓加权</b>，与模型的多因子集成口径不同，且持仓数据存在滞后；
+  两者差异较大时通常提示<b>基金已调仓</b>或当日行情极端，仅作交叉参考，不作交易依据。</div>
+</div></details>'''
+
+
 def build_html(d):
     top10_js = ",\n".join(f'  {{s:"{s}", w:{w}}}' for s, w in TOP10)
     theta_pcb = (d or {}).get("theta_pcb", 0) or 0
@@ -653,6 +687,9 @@ def build_html(d):
   </div>
 </div>"""
 
+        sina_data = load_json("sina_estimate.json")
+        sina_card = build_sina_card(sina_data, center)
+
         details = f"""
 <div class="col-main">
 <details class="card" id="rt_box" open><summary>实时行情快照（三口径） <span class="arr">›</span></summary>
@@ -679,6 +716,7 @@ def build_html(d):
   <div class="row"><span class="k">基准净值</span><span class="v2">{nav_prev}（{nav_prev_date}）</span></div>
   <div class="row"><span class="k">合理区间</span><span class="v2">{band[0]:+.2f}% ~ {band[1]:+.2f}%</span></div>
 </div></details>
+{sina_card}
 </div>
 
 <div class="col-side adv">

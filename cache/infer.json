@@ -1,129 +1,129 @@
 {
-  "window": "2026-06-29~2026-09-18 (60d)",
-  "alpha": 8.4e-05,
-  "lasso_r2": 0.984,
-  "nnls_r2": 0.943,
+  "window": "2026-06-30~2026-09-21 (60d)",
+  "alpha": 3.4e-05,
+  "lasso_r2": 0.986,
+  "nnls_r2": 0.934,
   "today_return_pct": {
-    "lasso": 2.77,
-    "nnls": 2.02
+    "lasso": 1.66,
+    "nnls": 1.09
   },
   "group_exposure_lasso": {
-    "market": 0.0,
-    "pcb": 0.1403,
-    "distract": 0.0,
-    "semis": 0.0,
-    "optical": 0.8597
+    "pcb": 0.1512,
+    "distract": 0.0194,
+    "semis": 0.0062,
+    "optical": 0.8233,
+    "market": 0.0
   },
-  "distract_total_weight": 0.0,
-  "corr_with_q2": 0.13,
+  "distract_total_weight": 0.0194,
+  "corr_with_q2": 0.172,
   "top_holdings": [
-    {
-      "code": "300548",
-      "name": "博创科技",
-      "group": "optical",
-      "weight": 0.151,
-      "ci_lo": 0.0442,
-      "ci_hi": 0.191,
-      "sel_freq": 0.99
-    },
     {
       "code": "300620",
       "name": "光库科技",
       "group": "optical",
-      "weight": 0.1476,
-      "ci_lo": 0.0601,
-      "ci_hi": 0.2254,
-      "sel_freq": 0.99
+      "weight": 0.1657,
+      "ci_lo": 0.0932,
+      "ci_hi": 0.2321,
+      "sel_freq": 1.0
+    },
+    {
+      "code": "300548",
+      "name": "博创科技",
+      "group": "optical",
+      "weight": 0.1384,
+      "ci_lo": 0.0472,
+      "ci_hi": 0.1962,
+      "sel_freq": 1.0
     },
     {
       "code": "688048",
       "name": "长光华芯",
       "group": "optical",
-      "weight": 0.1278,
-      "ci_lo": 0.0118,
-      "ci_hi": 0.1114,
-      "sel_freq": 0.955
+      "weight": 0.125,
+      "ci_lo": 0.0234,
+      "ci_hi": 0.1254,
+      "sel_freq": 0.98
     },
     {
       "code": "300394",
       "name": "天孚通信",
       "group": "optical",
-      "weight": 0.1199,
-      "ci_lo": 0.0416,
-      "ci_hi": 0.1849,
-      "sel_freq": 0.975
-    },
-    {
-      "code": "002463",
-      "name": "沪电股份",
-      "group": "pcb",
-      "weight": 0.0909,
-      "ci_lo": 0.0081,
-      "ci_hi": 0.2032,
-      "sel_freq": 0.935
+      "weight": 0.1035,
+      "ci_lo": 0.0199,
+      "ci_hi": 0.156,
+      "sel_freq": 0.98
     },
     {
       "code": "688498",
       "name": "源杰科技",
       "group": "optical",
-      "weight": 0.0874,
-      "ci_lo": 0.0185,
-      "ci_hi": 0.1916,
-      "sel_freq": 0.96
+      "weight": 0.0915,
+      "ci_lo": 0.0468,
+      "ci_hi": 0.1937,
+      "sel_freq": 0.995
     },
     {
       "code": "688313",
       "name": "仕佳光子",
       "group": "optical",
-      "weight": 0.0865,
+      "weight": 0.0707,
       "ci_lo": 0.0,
-      "ci_hi": 0.1398,
-      "sel_freq": 0.835
+      "ci_hi": 0.1132,
+      "sel_freq": 0.745
     },
     {
       "code": "300308",
       "name": "中际旭创",
       "group": "optical",
-      "weight": 0.062,
+      "weight": 0.0669,
       "ci_lo": 0.0,
-      "ci_hi": 0.1408,
-      "sel_freq": 0.925
+      "ci_hi": 0.1256,
+      "sel_freq": 0.89
+    },
+    {
+      "code": "002463",
+      "name": "沪电股份",
+      "group": "pcb",
+      "weight": 0.0631,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1693,
+      "sel_freq": 0.885
     },
     {
       "code": "300502",
       "name": "新易盛",
       "group": "optical",
-      "weight": 0.0417,
+      "weight": 0.0559,
       "ci_lo": 0.0,
-      "ci_hi": 0.096,
-      "sel_freq": 0.485
-    },
-    {
-      "code": "688025",
-      "name": "杰普特",
-      "group": "optical",
-      "weight": 0.0358,
-      "ci_lo": 0.0,
-      "ci_hi": 0.0599,
-      "sel_freq": 0.375
+      "ci_hi": 0.113,
+      "sel_freq": 0.685
     },
     {
       "code": "002916",
       "name": "深南电路",
       "group": "pcb",
-      "weight": 0.026,
+      "weight": 0.0465,
       "ci_lo": 0.0,
-      "ci_hi": 0.1053,
-      "sel_freq": 0.53
+      "ci_hi": 0.1205,
+      "sel_freq": 0.655
     },
     {
       "code": "300476",
       "name": "胜宏科技",
       "group": "pcb",
-      "weight": 0.0234,
+      "weight": 0.0416,
       "ci_lo": 0.0,
-      "ci_hi": 0.149,
-      "sel_freq": 0.615
+      "ci_hi": 0.134,
+      "sel_freq": 0.805
+    },
+    {
+      "code": "000858",
+      "name": "五粮液",
+      "group": "distract",
+      "weight": 0.0194,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1317,
+      "sel_freq": 0.57
     }
   ],
   "universe_size": 25

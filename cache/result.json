@@ -1,32 +1,29 @@
 {
   "version": "v4",
-  "cur_date": "2026-10-09",
-  "target_date": "2026-10-09",
+  "cur_date": "2026-10-12",
+  "target_date": "2026-10-12",
   "estimation_mode": "settled",
-  "estimation_label": "今日官方净值（2026-10-09）",
-  "market_session": "non_trade_day",
+  "estimation_label": "今日官方净值（2026-10-12）",
+  "market_session": "closed",
   "is_official_published": true,
-  "nav_latest_date": "2026-10-08",
-  "nav_prev": 0.4906,
-  "nav_prev_date": "2026-10-08",
-  "date_check_ok": false,
-  "date_problems": [
-    "基准净值日(2026-10-08) 非目标日上一交易日(应为 2026-09-30)",
-    "官方净值日(2026-10-08) 与目标日(2026-10-09) 关系异常，预期相同或为上一交易日(2026-09-30)"
-  ],
+  "nav_latest_date": "2026-10-09",
+  "nav_prev": 0.4846,
+  "nav_prev_date": "2026-10-09",
+  "date_check_ok": true,
+  "date_problems": [],
   "models": {
-    "P1_Q2静态": -9.25,
-    "P2_调仓替代": -8.54,
-    "P3_行业因子": -8.35,
-    "P4_层级组合": -8.66,
-    "P5_个股辅助": -9.5
+    "P1_Q2静态": -1.4,
+    "P2_调仓替代": -1.5,
+    "P3_行业因子": -1.54,
+    "P4_层级组合": -1.67,
+    "P5_个股辅助": -1.67
   },
   "model_weights": {
-    "P4_层级组合": 1.0,
+    "P3_行业因子": 0.824,
+    "P5_个股辅助": 0.176,
     "P1_Q2静态": 0.0,
     "P2_调仓替代": 0.0,
-    "P3_行业因子": 0.0,
-    "P5_个股辅助": 0.0
+    "P4_层级组合": 0.0
   },
   "model_groups": {
     "G1_静态基准": [
@@ -46,8 +43,8 @@
   "group_weights": {
     "G1_静态基准": 0.0,
     "G2_调仓替代": 0.0,
-    "G3_行业暴露": 1.0,
-    "G4_个股反推": 0.0
+    "G3_行业暴露": 0.5,
+    "G4_个股反推": 0.5
   },
   "ensemble_audit": {
     "gate": 1.0,
@@ -58,23 +55,24 @@
     "dropped": [
       "P1_Q2静态",
       "P2_调仓替代",
-      "P3_行业因子",
+      "P4_层级组合"
+    ],
+    "n_active": 2,
+    "provisional_capped": [
       "P5_个股辅助"
     ],
-    "n_active": 1,
-    "provisional_capped": [],
     "model_mae_used": {
-      "P1_Q2静态": 0.711,
-      "P2_调仓替代": 0.701,
-      "P3_行业因子": 0.614,
-      "P4_层级组合": 0.611,
-      "P5_个股辅助": 0.614
+      "P1_Q2静态": 0.702,
+      "P2_调仓替代": 0.694,
+      "P3_行业因子": 0.615,
+      "P4_层级组合": 0.616,
+      "P5_个股辅助": 0.615
     },
     "group_mae": {
-      "G1_静态基准": 0.711,
-      "G2_调仓替代": 0.701,
-      "G3_行业暴露": 0.611,
-      "G4_个股反推": 0.614
+      "G1_静态基准": 0.702,
+      "G2_调仓替代": 0.694,
+      "G3_行业暴露": 0.615,
+      "G4_个股反推": 0.615
     },
     "p5_mae_source": "代理值 max(MAE_P3, 0.4)，权重将被硬性封顶",
     "p5_is_real_oos": false,
@@ -82,87 +80,87 @@
   },
   "data_hygiene": {
     "has_intraday_snapshot": true,
-    "intraday_date": "2026-10-09",
+    "intraday_date": "2026-10-10",
     "intraday_settled": false,
     "unsettled_dates": [
-      "2026-10-09"
+      "2026-10-10"
     ],
     "stripped_rows": 0,
     "note": "klines.json 只含正式收盘价；盘中实时价存 intraday.json，不参与滚动回归/误差统计/回测"
   },
   "caliber_decision": null,
-  "P_final": -8.66,
-  "bias_correction": -0.21,
+  "P_final": -1.56,
+  "bias_correction": -0.19,
   "bias_detail": {
     "med20": -0.151,
     "med40": -0.151,
-    "ewma": -0.2659,
-    "raw": -0.2084,
-    "applied": -0.2084,
-    "divergence": 0.1149,
+    "ewma": -0.2201,
+    "raw": -0.1855,
+    "applied": -0.1855,
+    "divergence": 0.0691,
     "shrink": 1.0,
     "stable": true,
     "n": 60
   },
-  "P_final_corr": -8.87,
-  "nav_center": 0.4471,
+  "P_final_corr": -1.75,
+  "nav_center": 0.4761,
   "band_pct": [
-    -10.09,
-    -7.65
+    -2.97,
+    -0.53
   ],
-  "model_spread_pct": 1.15,
-  "theta_pcb": 0.0881,
+  "model_spread_pct": 0.28,
+  "theta_pcb": 0.0508,
   "theta_mkt": 0.0,
-  "pcb_signal": "强信号",
+  "pcb_signal": "中等信号",
   "pcb_evidence": {
     "C1_多窗口为正": true,
-    "C2_替代比例上升": true,
+    "C2_替代比例上升": false,
     "C3_加PCB后MAE下降": true,
     "C4_个股反推独立证据": true,
     "C5_多篮子一致": true,
-    "theta_slope": 0.00048,
-    "mae_gain_pp": 0.0208,
-    "beta_pcb": 0.1406,
-    "theta_now": 0.0881,
+    "theta_slope": -0.00266,
+    "mae_gain_pp": 0.0161,
+    "beta_pcb": 0.0961,
+    "theta_now": 0.0508,
     "windows_pcb": [
-      0.091,
-      0.0789,
-      0.0858
+      0.0618,
+      0.069,
+      0.0811
     ]
   },
-  "pcb_mae_with": 0.614,
-  "pcb_mae_without": 0.635,
+  "pcb_mae_with": 0.615,
+  "pcb_mae_without": 0.631,
   "pcb_basket_loo": [
-    0.0841,
-    0.0874,
-    0.0688
+    0.0819,
+    0.0825,
+    0.0634
   ],
   "pcb_sensitivity": {
-    "60": 0.0858,
-    "20": 0.0789,
-    "10": 0.091
+    "60": 0.0811,
+    "20": 0.069,
+    "10": 0.0618
   },
   "exposure": {
-    "光通信": 0.7518,
-    "PCB": 0.1406,
-    "半导体": 0.0,
-    "市场": 0.0637
+    "光通信": 0.8021,
+    "PCB": 0.0961,
+    "半导体": 0.014,
+    "市场": 0.0622
   },
-  "residual": 0.0439,
+  "residual": 0.0257,
   "confidence": "高",
-  "confidence_score": 84,
+  "confidence_score": 89,
   "confidence_detail": {
     "mae": 29.5,
-    "spread": 20.4,
+    "spread": 25,
     "theta": 15,
     "bias": 10,
     "data": 9.1
   },
   "mae": {
-    "P1": 0.71,
-    "P2": 0.7,
+    "P1": 0.7,
+    "P2": 0.69,
     "P3": 0.61,
-    "P4": 0.61,
+    "P4": 0.62,
     "P5": null
   },
   "oos_err_std_pct": 0.81,
@@ -180,22 +178,22 @@
     "nav_lag_days": 0
   },
   "intraday": {
-    "optical": -10.71,
-    "pcb": -1.11,
-    "semis": -4.1,
-    "market": -2.2,
-    "q2_now": -9.25
+    "optical": -1.51,
+    "pcb": -3.49,
+    "semis": -0.48,
+    "market": 0.24,
+    "q2_now": -1.4
   },
   "factor_corr": {
-    "opt_pcb": 0.722
+    "opt_pcb": 0.721
   },
-  "official_nav": 0.4906,
-  "official_chg": -10.46,
-  "official_date": "2026-10-08",
+  "official_nav": 0.4846,
+  "official_chg": -1.22,
+  "official_date": "2026-10-09",
   "market_state": {
     "regime": "bear",
-    "trend_pct": -5.87,
-    "vol_pct": 1.57,
+    "trend_pct": -5.84,
+    "vol_pct": 1.59,
     "n": 21
   }
 }

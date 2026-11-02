@@ -1,111 +1,120 @@
 {
-  "window": "2026-07-31~2026-10-30 (60d)",
-  "alpha": 6.8e-05,
-  "lasso_r2": 0.954,
-  "nnls_r2": 0.958,
+  "window": "2026-08-03~2026-11-02 (60d)",
+  "alpha": 8.5e-05,
+  "lasso_r2": 0.951,
+  "nnls_r2": 0.956,
   "today_return_pct": {
-    "lasso": -7.53,
-    "nnls": -6.2
+    "lasso": -1.15,
+    "nnls": -0.34
   },
   "group_exposure_lasso": {
-    "optical": 0.9245,
-    "pcb": 0.0755,
+    "semis": 0.0079,
     "distract": 0.0,
+    "pcb": 0.0467,
     "market": 0.0,
-    "semis": 0.0
+    "optical": 0.9454
   },
   "distract_total_weight": 0.0,
-  "corr_with_q2": 0.218,
+  "corr_with_q2": 0.215,
   "top_holdings": [
     {
       "code": "688048",
       "name": "长光华芯",
       "group": "optical",
-      "weight": 0.2639,
-      "ci_lo": 0.0319,
-      "ci_hi": 0.2478,
-      "sel_freq": 0.975
+      "weight": 0.2907,
+      "ci_lo": 0.0453,
+      "ci_hi": 0.2668,
+      "sel_freq": 0.99
     },
     {
       "code": "300620",
       "name": "光库科技",
       "group": "optical",
-      "weight": 0.1577,
-      "ci_lo": 0.0252,
-      "ci_hi": 0.1893,
-      "sel_freq": 0.975
+      "weight": 0.1579,
+      "ci_lo": 0.0563,
+      "ci_hi": 0.1907,
+      "sel_freq": 0.995
     },
     {
       "code": "688313",
       "name": "仕佳光子",
       "group": "optical",
-      "weight": 0.1234,
+      "weight": 0.1239,
       "ci_lo": 0.0,
-      "ci_hi": 0.207,
+      "ci_hi": 0.1914,
       "sel_freq": 0.9
     },
     {
       "code": "300548",
       "name": "博创科技",
       "group": "optical",
-      "weight": 0.1056,
+      "weight": 0.1012,
       "ci_lo": 0.0,
-      "ci_hi": 0.2135,
-      "sel_freq": 0.785
+      "ci_hi": 0.205,
+      "sel_freq": 0.755
     },
     {
       "code": "688025",
       "name": "杰普特",
       "group": "optical",
-      "weight": 0.0992,
+      "weight": 0.1009,
       "ci_lo": 0.0,
-      "ci_hi": 0.155,
-      "sel_freq": 0.805
-    },
-    {
-      "code": "688498",
-      "name": "源杰科技",
-      "group": "optical",
-      "weight": 0.0865,
-      "ci_lo": 0.0008,
-      "ci_hi": 0.1564,
-      "sel_freq": 0.945
+      "ci_hi": 0.1261,
+      "sel_freq": 0.77
     },
     {
       "code": "300308",
       "name": "中际旭创",
       "group": "optical",
-      "weight": 0.08,
+      "weight": 0.0815,
       "ci_lo": 0.0,
-      "ci_hi": 0.142,
-      "sel_freq": 0.915
+      "ci_hi": 0.1436,
+      "sel_freq": 0.92
     },
     {
-      "code": "002916",
-      "name": "深南电路",
-      "group": "pcb",
-      "weight": 0.0472,
+      "code": "688498",
+      "name": "源杰科技",
+      "group": "optical",
+      "weight": 0.0777,
       "ci_lo": 0.0,
-      "ci_hi": 0.1504,
-      "sel_freq": 0.54
+      "ci_hi": 0.1619,
+      "sel_freq": 0.895
     },
     {
       "code": "002463",
       "name": "沪电股份",
       "group": "pcb",
-      "weight": 0.0283,
+      "weight": 0.0242,
       "ci_lo": 0.0,
-      "ci_hi": 0.1738,
-      "sel_freq": 0.74
+      "ci_hi": 0.1714,
+      "sel_freq": 0.745
+    },
+    {
+      "code": "002916",
+      "name": "深南电路",
+      "group": "pcb",
+      "weight": 0.0225,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1272,
+      "sel_freq": 0.475
     },
     {
       "code": "300394",
       "name": "天孚通信",
       "group": "optical",
-      "weight": 0.0082,
+      "weight": 0.0117,
       "ci_lo": 0.0,
-      "ci_hi": 0.0991,
-      "sel_freq": 0.39
+      "ci_hi": 0.0973,
+      "sel_freq": 0.395
+    },
+    {
+      "code": "603986",
+      "name": "兆易创新",
+      "group": "semis",
+      "weight": 0.0079,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0933,
+      "sel_freq": 0.405
     },
     {
       "code": "300502",
@@ -114,16 +123,7 @@
       "weight": 0.0,
       "ci_lo": 0.0,
       "ci_hi": 0.0,
-      "sel_freq": 0.02
-    },
-    {
-      "code": "300570",
-      "name": "太辰光",
-      "group": "optical",
-      "weight": 0.0,
-      "ci_lo": 0.0,
-      "ci_hi": 0.06,
-      "sel_freq": 0.18
+      "sel_freq": 0.005
     }
   ],
   "universe_size": 25

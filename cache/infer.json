@@ -1,111 +1,120 @@
 {
-  "window": "2026-08-04~2026-11-03 (60d)",
-  "alpha": 0.000147,
-  "lasso_r2": 0.942,
-  "nnls_r2": 0.954,
+  "window": "2026-08-05~2026-11-04 (60d)",
+  "alpha": 0.000129,
+  "lasso_r2": 0.939,
+  "nnls_r2": 0.951,
   "today_return_pct": {
-    "lasso": -11.11,
-    "nnls": -8.64
+    "lasso": 11.98,
+    "nnls": 9.56
   },
   "group_exposure_lasso": {
-    "distract": 0.0,
-    "pcb": 0.0024,
     "semis": 0.0,
-    "optical": 0.9976,
-    "market": 0.0
+    "pcb": 0.0141,
+    "market": 0.0,
+    "optical": 0.9859,
+    "distract": 0.0
   },
   "distract_total_weight": 0.0,
-  "corr_with_q2": 0.287,
+  "corr_with_q2": 0.295,
   "top_holdings": [
     {
       "code": "688048",
       "name": "长光华芯",
       "group": "optical",
-      "weight": 0.3656,
-      "ci_lo": 0.042,
-      "ci_hi": 0.2656,
-      "sel_freq": 0.965
+      "weight": 0.3832,
+      "ci_lo": 0.0391,
+      "ci_hi": 0.2789,
+      "sel_freq": 0.97
     },
     {
       "code": "300620",
       "name": "光库科技",
       "group": "optical",
-      "weight": 0.1663,
-      "ci_lo": 0.0462,
-      "ci_hi": 0.1962,
-      "sel_freq": 0.99
-    },
-    {
-      "code": "688313",
-      "name": "仕佳光子",
-      "group": "optical",
-      "weight": 0.1298,
-      "ci_lo": 0.0,
-      "ci_hi": 0.1996,
-      "sel_freq": 0.865
-    },
-    {
-      "code": "300548",
-      "name": "博创科技",
-      "group": "optical",
-      "weight": 0.1119,
-      "ci_lo": 0.0,
-      "ci_hi": 0.1982,
-      "sel_freq": 0.81
+      "weight": 0.1355,
+      "ci_lo": 0.0102,
+      "ci_hi": 0.1736,
+      "sel_freq": 0.95
     },
     {
       "code": "688025",
       "name": "杰普特",
       "group": "optical",
-      "weight": 0.0808,
+      "weight": 0.1171,
       "ci_lo": 0.0,
-      "ci_hi": 0.1159,
+      "ci_hi": 0.1154,
       "sel_freq": 0.715
+    },
+    {
+      "code": "300548",
+      "name": "博创科技",
+      "group": "optical",
+      "weight": 0.1162,
+      "ci_lo": 0.0,
+      "ci_hi": 0.2336,
+      "sel_freq": 0.865
+    },
+    {
+      "code": "688313",
+      "name": "仕佳光子",
+      "group": "optical",
+      "weight": 0.1096,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1833,
+      "sel_freq": 0.82
     },
     {
       "code": "688498",
       "name": "源杰科技",
       "group": "optical",
-      "weight": 0.0528,
+      "weight": 0.0421,
       "ci_lo": 0.0,
-      "ci_hi": 0.1613,
-      "sel_freq": 0.865
+      "ci_hi": 0.1763,
+      "sel_freq": 0.905
     },
     {
       "code": "300308",
       "name": "中际旭创",
       "group": "optical",
-      "weight": 0.05,
+      "weight": 0.0381,
       "ci_lo": 0.0,
-      "ci_hi": 0.1338,
-      "sel_freq": 0.74
+      "ci_hi": 0.1277,
+      "sel_freq": 0.8
     },
     {
       "code": "300394",
       "name": "天孚通信",
       "group": "optical",
-      "weight": 0.0302,
+      "weight": 0.0252,
       "ci_lo": 0.0,
-      "ci_hi": 0.0986,
-      "sel_freq": 0.325
+      "ci_hi": 0.0985,
+      "sel_freq": 0.34
     },
     {
       "code": "300570",
       "name": "太辰光",
       "group": "optical",
-      "weight": 0.0101,
+      "weight": 0.019,
       "ci_lo": 0.0,
-      "ci_hi": 0.0648,
-      "sel_freq": 0.34
+      "ci_hi": 0.0827,
+      "sel_freq": 0.315
+    },
+    {
+      "code": "002463",
+      "name": "沪电股份",
+      "group": "pcb",
+      "weight": 0.0073,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1524,
+      "sel_freq": 0.67
     },
     {
       "code": "002916",
       "name": "深南电路",
       "group": "pcb",
-      "weight": 0.0024,
+      "weight": 0.0068,
       "ci_lo": 0.0,
-      "ci_hi": 0.1366,
-      "sel_freq": 0.54
+      "ci_hi": 0.1401,
+      "sel_freq": 0.5
     },
     {
       "code": "300502",
@@ -113,17 +122,8 @@
       "group": "optical",
       "weight": 0.0,
       "ci_lo": 0.0,
-      "ci_hi": 0.0402,
-      "sel_freq": 0.1
-    },
-    {
-      "code": "002463",
-      "name": "沪电股份",
-      "group": "pcb",
-      "weight": 0.0,
-      "ci_lo": 0.0,
-      "ci_hi": 0.1394,
-      "sel_freq": 0.64
+      "ci_hi": 0.0002,
+      "sel_freq": 0.04
     }
   ],
   "universe_size": 25

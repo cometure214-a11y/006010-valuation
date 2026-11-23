@@ -1,129 +1,129 @@
 {
-  "window": "2026-08-21~2026-11-20 (60d)",
-  "alpha": 4.2e-05,
-  "lasso_r2": 0.949,
-  "nnls_r2": 0.931,
+  "window": "2026-08-24~2026-11-23 (60d)",
+  "alpha": 9.1e-05,
+  "lasso_r2": 0.942,
+  "nnls_r2": 0.917,
   "today_return_pct": {
-    "lasso": -6.47,
-    "nnls": -4.14
+    "lasso": 4.98,
+    "nnls": 2.42
   },
   "group_exposure_lasso": {
     "market": 0.0,
-    "semis": 0.1279,
-    "pcb": 0.1485,
-    "distract": 0.0008,
-    "optical": 0.7228
+    "semis": 0.0337,
+    "distract": 0.0,
+    "optical": 0.7772,
+    "pcb": 0.1891
   },
-  "distract_total_weight": 0.0008,
-  "corr_with_q2": 0.351,
+  "distract_total_weight": 0.0,
+  "corr_with_q2": 0.339,
   "top_holdings": [
     {
-      "code": "688048",
-      "name": "长光华芯",
+      "code": "688313",
+      "name": "仕佳光子",
       "group": "optical",
-      "weight": 0.1816,
+      "weight": 0.2101,
       "ci_lo": 0.0,
-      "ci_hi": 0.1979,
-      "sel_freq": 0.905
+      "ci_hi": 0.2433,
+      "sel_freq": 0.865
     },
     {
       "code": "002916",
       "name": "深南电路",
       "group": "pcb",
-      "weight": 0.1347,
+      "weight": 0.1891,
       "ci_lo": 0.0,
-      "ci_hi": 0.2157,
-      "sel_freq": 0.89
+      "ci_hi": 0.218,
+      "sel_freq": 0.9
+    },
+    {
+      "code": "688048",
+      "name": "长光华芯",
+      "group": "optical",
+      "weight": 0.1797,
+      "ci_lo": 0.0,
+      "ci_hi": 0.1999,
+      "sel_freq": 0.88
     },
     {
       "code": "688025",
       "name": "杰普特",
       "group": "optical",
-      "weight": 0.1339,
+      "weight": 0.1531,
       "ci_lo": 0.0,
-      "ci_hi": 0.142,
-      "sel_freq": 0.895
-    },
-    {
-      "code": "688313",
-      "name": "仕佳光子",
-      "group": "optical",
-      "weight": 0.1324,
-      "ci_lo": 0.0,
-      "ci_hi": 0.2269,
-      "sel_freq": 0.775
+      "ci_hi": 0.1602,
+      "sel_freq": 0.885
     },
     {
       "code": "688498",
       "name": "源杰科技",
       "group": "optical",
-      "weight": 0.0921,
-      "ci_lo": 0.0,
-      "ci_hi": 0.1576,
-      "sel_freq": 0.91
+      "weight": 0.1044,
+      "ci_lo": 0.0024,
+      "ci_hi": 0.1655,
+      "sel_freq": 0.93
     },
     {
       "code": "300548",
       "name": "博创科技",
       "group": "optical",
-      "weight": 0.0913,
+      "weight": 0.0949,
       "ci_lo": 0.0,
-      "ci_hi": 0.2042,
-      "sel_freq": 0.74
+      "ci_hi": 0.2197,
+      "sel_freq": 0.765
     },
     {
       "code": "300394",
       "name": "天孚通信",
       "group": "optical",
-      "weight": 0.0782,
+      "weight": 0.035,
       "ci_lo": 0.0,
-      "ci_hi": 0.1556,
-      "sel_freq": 0.69
+      "ci_hi": 0.1179,
+      "sel_freq": 0.56
     },
     {
       "code": "603986",
       "name": "兆易创新",
       "group": "semis",
-      "weight": 0.0687,
+      "weight": 0.0337,
       "ci_lo": 0.0,
-      "ci_hi": 0.1997,
-      "sel_freq": 0.76
+      "ci_hi": 0.1824,
+      "sel_freq": 0.755
     },
     {
-      "code": "688981",
-      "name": "中芯国际",
-      "group": "semis",
-      "weight": 0.0592,
+      "code": "300502",
+      "name": "新易盛",
+      "group": "optical",
+      "weight": 0.0,
       "ci_lo": 0.0,
-      "ci_hi": 0.1444,
-      "sel_freq": 0.79
-    },
-    {
-      "code": "002463",
-      "name": "沪电股份",
-      "group": "pcb",
-      "weight": 0.0138,
-      "ci_lo": 0.0,
-      "ci_hi": 0.1869,
-      "sel_freq": 0.53
+      "ci_hi": 0.0,
+      "sel_freq": 0.01
     },
     {
       "code": "300620",
       "name": "光库科技",
       "group": "optical",
-      "weight": 0.0115,
+      "weight": 0.0,
       "ci_lo": 0.0,
-      "ci_hi": 0.1317,
-      "sel_freq": 0.71
+      "ci_hi": 0.1244,
+      "sel_freq": 0.635
+    },
+    {
+      "code": "300570",
+      "name": "太辰光",
+      "group": "optical",
+      "weight": 0.0,
+      "ci_lo": 0.0,
+      "ci_hi": 0.0817,
+      "sel_freq": 0.18
     },
     {
       "code": "300308",
       "name": "中际旭创",
       "group": "optical",
-      "weight": 0.0018,
+      "weight": 0.0,
       "ci_lo": 0.0,
-      "ci_hi": 0.0682,
-      "sel_freq": 0.39
+      "ci_hi": 0.0834,
+      "sel_freq": 0.355
     }
   ],
   "universe_size": 25
